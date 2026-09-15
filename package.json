@@ -10,11 +10,14 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.70",
+    "@ai-sdk/react": "^4.0.104",
     "ai": "^7.0.101",
     "next": "16.3.5",
     "psi": "^4.1.0",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
