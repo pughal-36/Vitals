@@ -1,3 +1,18 @@
+# Vitals Dashboard
+*SEO & Performance Audit Dashboard (Week 3 Capstone)*
+
+## FE-06: Streaming AI Chat Interface
+This feature converts the audit-summary AI into a real-time streaming interface using the Vercel AI SDK and Gemini Flash.
+
+**Key components:**
+- **Route Handler**: [`src/app/api/chat/route.ts`](file:///c:/Users/HP/Desktop/Vitals/src/app/api/chat/route.ts) — handles API requests, converts UI messages to model format, and returns a `toUIMessageStreamResponse`.
+- **Client Component**: [`src/app/chat/AuditChat.tsx`](file:///c:/Users/HP/Desktop/Vitals/src/app/chat/AuditChat.tsx) — a fully featured `useChat` implementation with a thinking indicator, markdown support, stop functionality, and auto-scroll logic.
+- **Model Config**: [`src/lib/gemini/model.ts`](file:///c:/Users/HP/Desktop/Vitals/src/lib/gemini/model.ts) — single provider factory that safely bridges the `GEMINI_API_KEY`.
+- **System Prompt**: [`src/lib/gemini/prompts.ts`](file:///c:/Users/HP/Desktop/Vitals/src/lib/gemini/prompts.ts) — extracted prompt module to keep config decoupled for FE-07.
+
+**Preview URL**: Visit `/chat` locally to test.
+
+---
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
