@@ -21,7 +21,7 @@ type HealthResult = HealthSuccess | HealthFailure;
 async function fetchHealthCheck(): Promise<HealthResult> {
   try {
     const { data } = await psi("https://vercel.com", {
-      nokey: "true",
+      key: process.env.PAGESPEED_API_KEY,
       strategy: "mobile",
     });
 
