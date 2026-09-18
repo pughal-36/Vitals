@@ -14,9 +14,20 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Vitals — SEO & Performance Audit Dashboard",
+  title: {
+    default: "Vitals — Web Performance & SEO Audit Dashboard",
+    template: "%s | Vitals",
+  },
   description:
-    "Analyze any website's Core Web Vitals, PageSpeed score, and get AI-powered optimization insights.",
+    "Audit any website's Core Web Vitals and PageSpeed score instantly, then get AI-powered optimisation tips from Gemini.",
+  icons: {
+    icon: "/favicon.ico",
+  },
+  openGraph: {
+    title: "Vitals — Web Performance & SEO Audit Dashboard",
+    description: "Audit any website's Core Web Vitals and PageSpeed score instantly.",
+    type: "website",
+  },
 };
 
 const navLinks = [

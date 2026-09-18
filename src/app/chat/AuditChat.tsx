@@ -120,37 +120,48 @@ export default function AuditChat() {
         )}
 
         {/* Message bubbles */}
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-          >
+        {messages.map((message, idx) => {
+          const isLastAssistant =
+            message.role === "assistant" && idx === messages.length - 1;
+          const isStreaming = status === "streaming" && isLastAssistant;
+          return (
             <div
-              className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                message.role === "user"
-                  ? "bg-primary text-white rounded-br-md"
-                  : "bg-surface border border-border text-foreground rounded-bl-md"
-              }`}
+              key={message.id}
+              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              {message.role === "assistant" ? (
-                <div className="prose prose-invert prose-sm max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {getMessageText(message)}
-                  </ReactMarkdown>
-                </div>
-              ) : (
-                <p className="whitespace-pre-wrap">{getMessageText(message)}</p>
-              )}
+              <div
+                className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                  message.role === "user"
+                    ? "bg-primary text-white rounded-br-md"
+                    : "bg-surface border border-border text-foreground rounded-bl-md"
+                }`}
+              >
+                {message.role === "assistant" ? (
+                  <div className="prose prose-invert prose-sm max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {getMessageText(message)}
+                    </ReactMarkdown>
+                    {/* 5. Streaming/typing indicator — blinking cursor while tokens arrive */}
+                    {isStreaming && (
+                      <span
+                        aria-label="Generating…"
+                        className="inline-block w-2 h-4 ml-0.5 align-middle bg-primary/70 rounded-sm animate-pulse"
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <p className="whitespace-pre-wrap">{getMessageText(message)}</p>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {/* ─── Thinking indicator ───
             Shows when status is "submitted" (request sent, waiting for first token).
             When status moves to "streaming", the assistant message appears in messages[]
             automatically, so this indicator disappears naturally — no flicker because
-            the indicator and the first token are never both visible at the same time.
-            The CSS transition (opacity + transform) makes the handoff feel continuous. */}
+            the indicator and the first token are never both visible at the same time. */}
         {status === "submitted" && (
           <div className="flex justify-start">
             <div className="bg-surface border border-border rounded-2xl rounded-bl-md px-4 py-3 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -160,6 +171,21 @@ export default function AuditChat() {
                 <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce [animation-delay:300ms]" />
               </div>
               <span className="text-xs text-muted">Thinking…</span>
+            </div>
+          </div>
+        )}
+
+        {/* 5. Error state — shown when the stream drops mid-response */}
+        {status === "error" && (
+          <div
+            role="alert"
+            className="flex justify-start"
+          >
+            <div className="max-w-[85%] sm:max-w-[75%] rounded-2xl rounded-bl-md px-4 py-3 bg-danger/10 border border-danger/30 text-sm">
+              <p className="text-danger font-semibold mb-1">Connection dropped</p>
+              <p className="text-muted text-xs">
+                The response stream was interrupted. Your previous messages are still here — try sending your question again.
+              </p>
             </div>
           </div>
         )}
