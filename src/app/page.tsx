@@ -1,5 +1,6 @@
 import psi from "psi";
 import { saveScan } from "@/lib/supabase/scans";
+import { Suspense } from "react";
 
 /* ─── Types ─── */
 type HealthSuccess = {
@@ -87,7 +88,6 @@ export default async function HomePage(props: { searchParams: Promise<{ [key: st
   const searchParams = await props.searchParams;
   const urlParam = searchParams.url;
   const targetUrl = typeof urlParam === 'string' && urlParam ? urlParam : "https://vercel.com";
-  const health = await fetchHealthCheck(targetUrl);
 
   return (
     <main className="flex-1 flex flex-col items-center px-4 py-12 sm:py-20 gap-16">
@@ -162,92 +162,109 @@ export default async function HomePage(props: { searchParams: Promise<{ [key: st
               PSI Health Check
             </h2>
             <p className="text-sm text-muted">
-              Live PageSpeed Insights fetch for vercel.com
+              Live PageSpeed Insights fetch for {targetUrl}
             </p>
           </div>
         </div>
 
-        {health.ok ? (
-          <>
-            {/* Score Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-              {(
-                [
-                  ["Performance", health.scores.performance],
-                  ["Accessibility", health.scores.accessibility],
-                  ["Best Practices", health.scores.bestPractices],
-                  ["SEO", health.scores.seo],
-                ] as const
-              ).map(([label, score]) => (
-                <div
-                  key={label}
-                  className={`rounded-2xl border p-4 text-center transition-all duration-200 ${scoreBg(score)}`}
-                >
-                  <p
-                    className={`text-3xl sm:text-4xl font-bold tabular-nums ${scoreColor(score)}`}
-                  >
-                    {score}
-                  </p>
-                  <p className="text-xs text-muted mt-1 font-medium">
-                    {label}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            {/* Meta Info */}
-            <div className="flex flex-wrap gap-4 text-xs text-muted mb-4">
-              <span>
-                URL:{" "}
-                <code className="px-2 py-0.5 rounded bg-surface font-mono text-accent">
-                  {health.url}
-                </code>
-              </span>
-              <span>
-                Fetched:{" "}
-                <code className="px-2 py-0.5 rounded bg-surface font-mono">
-                  {health.fetchedAt}
-                </code>
-              </span>
-            </div>
-
-            {/* Raw JSON */}
-            <details className="group">
-              <summary className="cursor-pointer text-sm text-muted hover:text-foreground transition-colors select-none flex items-center gap-2">
-                <svg
-                  className="w-4 h-4 transition-transform group-open:rotate-90"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-                View raw category JSON
-              </summary>
-              <pre className="mt-3 p-4 rounded-2xl bg-surface border border-border overflow-x-auto text-xs text-muted font-mono leading-relaxed max-h-96">
-                {JSON.stringify(health.raw, null, 2)}
-              </pre>
-            </details>
-          </>
-        ) : (
-          <div className="rounded-2xl border border-danger/30 bg-danger/10 p-6 text-center">
-            <p className="text-danger font-semibold mb-1">
-              Health check failed
-            </p>
-            <p className="text-sm text-muted">
-              {health.error}
-            </p>
-            <p className="text-xs text-muted mt-2">
-              Fetched: {health.fetchedAt}
-            </p>
+        <Suspense fallback={
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-muted animate-pulse">Running Lighthouse audit... this may take 10-15 seconds.</p>
           </div>
-        )}
+        }>
+          <HealthCheckResults targetUrl={targetUrl} />
+        </Suspense>
       </section>
     </main>
+  );
+}
+
+async function HealthCheckResults({ targetUrl }: { targetUrl: string }) {
+  const health = await fetchHealthCheck(targetUrl);
+  
+  if (!health.ok) {
+    return (
+      <div className="rounded-2xl border border-danger/30 bg-danger/10 p-6 text-center">
+        <p className="text-danger font-semibold mb-1">
+          Health check failed
+        </p>
+        <p className="text-sm text-muted">
+          {health.error}
+        </p>
+        <p className="text-xs text-muted mt-2">
+          Fetched: {health.fetchedAt}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Score Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        {(
+          [
+            ["Performance", health.scores.performance],
+            ["Accessibility", health.scores.accessibility],
+            ["Best Practices", health.scores.bestPractices],
+            ["SEO", health.scores.seo],
+          ] as const
+        ).map(([label, score]) => (
+          <div
+            key={label}
+            className={`rounded-2xl border p-4 text-center transition-all duration-200 ${scoreBg(score)}`}
+          >
+            <p
+              className={`text-3xl sm:text-4xl font-bold tabular-nums ${scoreColor(score)}`}
+            >
+              {score}
+            </p>
+            <p className="text-xs text-muted mt-1 font-medium">
+              {label}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Meta Info */}
+      <div className="flex flex-wrap gap-4 text-xs text-muted mb-4">
+        <span>
+          URL:{" "}
+          <code className="px-2 py-0.5 rounded bg-surface font-mono text-accent">
+            {health.url}
+          </code>
+        </span>
+        <span>
+          Fetched:{" "}
+          <code className="px-2 py-0.5 rounded bg-surface font-mono">
+            {health.fetchedAt}
+          </code>
+        </span>
+      </div>
+
+      {/* Raw JSON */}
+      <details className="group">
+        <summary className="cursor-pointer text-sm text-muted hover:text-foreground transition-colors select-none flex items-center gap-2">
+          <svg
+            className="w-4 h-4 transition-transform group-open:rotate-90"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+          View raw category JSON
+        </summary>
+        <pre className="mt-3 p-4 rounded-2xl bg-surface border border-border overflow-x-auto text-xs text-muted font-mono leading-relaxed max-h-96">
+          {JSON.stringify(health.raw, null, 2)}
+        </pre>
+      </details>
+    </>
   );
 }
