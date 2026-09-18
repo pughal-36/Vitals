@@ -1,4 +1,5 @@
 import psi from "psi";
+import { saveScan } from "@/lib/supabase/scans";
 
 /* ─── Types ─── */
 type HealthSuccess = {
@@ -18,10 +19,10 @@ type HealthFailure = {
 type HealthResult = HealthSuccess | HealthFailure;
 
 /* ─── Health-Check: Hardcoded PSI fetch ─── */
-async function fetchHealthCheck(): Promise<HealthResult> {
+async function fetchHealthCheck(targetUrl: string): Promise<HealthResult> {
   try {
-    const { data } = await psi("https://vercel.com", {
-      key: process.env.PAGESPEED_API_KEY,
+    const { data } = await psi(targetUrl, {
+      key: process.env.VITALS_PAGESPEED_API_KEY,
       strategy: "mobile",
     });
 
@@ -39,13 +40,26 @@ async function fetchHealthCheck(): Promise<HealthResult> {
       seo: Math.round((categories?.seo?.score ?? 0) * 100),
     };
 
-    return {
+    const result: HealthSuccess = {
       ok: true as const,
       url: data.id,
       fetchedAt: new Date().toISOString(),
       scores,
       raw: data.lighthouseResult?.categories,
     };
+
+    // Persist to Supabase (fire-and-forget — don't block the render)
+    saveScan({
+      url: data.id,
+      strategy: "mobile",
+      score_performance: scores.performance,
+      score_accessibility: scores.accessibility,
+      score_best_practices: scores.bestPractices,
+      score_seo: scores.seo,
+      raw_categories: data.lighthouseResult?.categories as Record<string, unknown> ?? null,
+    }).catch((err) => console.error("[supabase] saveScan failed:", err));
+
+    return result;
   } catch (error) {
     return {
       ok: false as const,
@@ -69,8 +83,11 @@ function scoreBg(score: number): string {
 }
 
 /* ─── Page Component ─── */
-export default async function HomePage() {
-  const health = await fetchHealthCheck();
+export default async function HomePage(props: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
+  const searchParams = await props.searchParams;
+  const urlParam = searchParams.url;
+  const targetUrl = typeof urlParam === 'string' && urlParam ? urlParam : "https://vercel.com";
+  const health = await fetchHealthCheck(targetUrl);
 
   return (
     <main className="flex-1 flex flex-col items-center px-4 py-12 sm:py-20 gap-16">
@@ -91,11 +108,11 @@ export default async function HomePage() {
           AI‑powered optimization summary. Coming soon.
         </p>
 
-        {/* Placeholder URL Input (non-functional) */}
-        <div className="max-w-lg mx-auto flex items-center gap-2 p-1.5 rounded-2xl glass">
-          <div className="flex-1 flex items-center gap-2 px-4 py-3 text-muted text-sm">
+        {/* URL Input Form */}
+        <form action="/" method="GET" className="max-w-lg mx-auto flex items-center gap-2 p-1.5 rounded-2xl glass">
+          <div className="flex-1 flex items-center gap-2 px-4 py-2 text-foreground text-sm">
             <svg
-              className="w-4 h-4 shrink-0"
+              className="w-4 h-4 shrink-0 text-muted"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -107,12 +124,19 @@ export default async function HomePage() {
                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
               />
             </svg>
-            <span>https://example.com</span>
+            <input
+              type="url"
+              name="url"
+              defaultValue={targetUrl}
+              placeholder="https://example.com"
+              required
+              className="w-full bg-transparent outline-none placeholder:text-muted"
+            />
           </div>
-          <span className="px-5 py-3 rounded-xl bg-primary text-white text-sm font-semibold cursor-default opacity-60">
+          <button type="submit" className="px-5 py-3 rounded-xl bg-primary text-white text-sm font-semibold hover:opacity-90 transition-opacity">
             Scan
-          </span>
-        </div>
+          </button>
+        </form>
       </section>
 
       {/* Health Check Section */}
