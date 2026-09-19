@@ -35,6 +35,7 @@ export async function POST(req: Request) {
         parameters: z.object({
           url: z.string().url("Must be a valid URL"),
         }),
+        // @ts-expect-error - Zod inference mismatch with AI SDK tool overload
         execute: async ({ url }) => {
           try {
             const controller = new AbortController();
@@ -59,7 +60,7 @@ export async function POST(req: Request) {
               canonicalUrl: $("link[rel='canonical']").attr("href") || null,
             };
           } catch (error: any) {
-            throw new Error(error.message || "Failed to fetch meta tags");
+            return { error: error.message || "Failed to fetch meta tags" };
           }
         },
       }),
