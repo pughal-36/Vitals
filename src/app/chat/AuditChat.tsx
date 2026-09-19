@@ -24,6 +24,138 @@ import { useState, useRef, useEffect, useCallback, type FormEvent } from "react"
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+// ─── Tool Invocation UI Component ───
+function ToolInvocationUI({ toolInvocation }: { toolInvocation: any }) {
+  if (toolInvocation.toolName !== 'fetchMetaTags') {
+    return null;
+  }
+
+  const { state, args, result } = toolInvocation;
+  const url = args?.url || "url";
+
+  // input-streaming
+  if (state === 'partial-call') {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted animate-pulse py-2">
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <span>preparing to check {url}...</span>
+      </div>
+    );
+  }
+
+  // input-available
+  if (state === 'call') {
+    return (
+      <div className="flex items-center gap-3 p-4 rounded-xl border border-border bg-surface my-2 shadow-sm transition-opacity duration-200">
+        <div className="w-5 h-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        <span className="text-sm font-medium">Fetching meta tags for <span className="text-primary">{url}</span>...</span>
+      </div>
+    );
+  }
+
+  // output-available or output-error
+  if (state === 'result') {
+    if (result && result.error) {
+      return (
+        <div className="p-4 rounded-xl border border-danger/30 bg-danger/10 text-danger my-2 shadow-sm transition-opacity duration-200">
+          <div className="flex items-center gap-2 font-semibold mb-2">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            Error fetching meta tags
+          </div>
+          <div className="text-sm opacity-90">{result.error}</div>
+        </div>
+      );
+    }
+    
+    if (typeof result === 'string') {
+       return (
+        <div className="p-4 rounded-xl border border-danger/30 bg-danger/10 text-danger my-2 shadow-sm transition-opacity duration-200">
+          <div className="flex items-center gap-2 font-semibold mb-2">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            Error fetching meta tags
+          </div>
+          <div className="text-sm opacity-90">{result}</div>
+        </div>
+      );
+    }
+
+    const { title, description, ogTitle, ogDescription, ogImage, canonicalUrl } = result || {};
+
+    const renderField = (label: string, value: string | null | undefined, isImage: boolean = false) => {
+      if (!value) {
+        return (
+          <td className="px-4 py-3 text-sm text-muted italic">
+            <span className="flex items-center gap-1.5">
+              <svg className="w-4 h-4 text-muted/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Not found
+            </span>
+          </td>
+        );
+      }
+      return (
+        <td className="px-4 py-3 text-sm font-medium text-foreground">
+          {isImage ? (
+            <img src={value} alt="OG Image Thumbnail" className="h-12 w-auto max-w-[120px] rounded border border-border" />
+          ) : (
+             <span className="break-all">{value}</span>
+          )}
+        </td>
+      );
+    };
+
+    return (
+      <div className="my-3 rounded-xl border border-border overflow-hidden shadow-sm bg-surface transition-opacity duration-200 animate-in fade-in">
+        <div className="bg-primary/5 px-4 py-2 border-b border-border flex items-center gap-2 text-sm font-semibold text-primary">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+          </svg>
+          Meta Tags Found
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <tbody className="divide-y divide-border">
+              <tr>
+                <th className="px-4 py-3 text-sm font-medium text-muted w-1/3 bg-surface-hover/50">Title</th>
+                {renderField('Title', title)}
+              </tr>
+              <tr>
+                <th className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">Description</th>
+                {renderField('Description', description)}
+              </tr>
+              <tr>
+                <th className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">OG Title</th>
+                {renderField('OG Title', ogTitle)}
+              </tr>
+              <tr>
+                <th className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">OG Description</th>
+                {renderField('OG Description', ogDescription)}
+              </tr>
+              <tr>
+                <th className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">OG Image</th>
+                {renderField('OG Image', ogImage, true)}
+              </tr>
+              <tr>
+                <th className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">Canonical URL</th>
+                {renderField('Canonical URL', canonicalUrl)}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 export default function AuditChat() {
   // ─── useChat hook ───
   // By default it POSTs to /api/chat, which is exactly where our route handler lives.
@@ -87,8 +219,6 @@ export default function AuditChat() {
   };
 
   // ─── Extract text from message parts ───
-  // In AI SDK v7, message content lives in message.parts[],
-  // where each part has a type. We only render text parts for now.
   const getMessageText = (message: UIMessage): string => {
     return message.parts
       .filter((part): part is { type: "text"; text: string } => part.type === "text")
@@ -137,17 +267,28 @@ export default function AuditChat() {
                 }`}
               >
                 {message.role === "assistant" ? (
-                  <div className="prose prose-invert prose-sm max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {getMessageText(message)}
-                    </ReactMarkdown>
-                    {/* 5. Streaming/typing indicator — blinking cursor while tokens arrive */}
-                    {isStreaming && (
-                      <span
-                        aria-label="Generating…"
-                        className="inline-block w-2 h-4 ml-0.5 align-middle bg-primary/70 rounded-sm animate-pulse"
-                      />
-                    )}
+                  <div className="flex flex-col gap-2 w-full">
+                    {message.parts.map((part, partIdx) => {
+                      if (part.type === "text" && part.text) {
+                        return (
+                          <div key={partIdx} className="prose prose-invert prose-sm max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {part.text}
+                            </ReactMarkdown>
+                            {/* Streaming/typing indicator — blinking cursor while tokens arrive */}
+                            {isStreaming && partIdx === message.parts.length - 1 && (
+                              <span
+                                aria-label="Generating…"
+                                className="inline-block w-2 h-4 ml-0.5 align-middle bg-primary/70 rounded-sm animate-pulse"
+                              />
+                            )}
+                          </div>
+                        );
+                      } else if (part.type === "tool-invocation") {
+                        return <ToolInvocationUI key={part.toolCallId} toolInvocation={part} />;
+                      }
+                      return null;
+                    })}
                   </div>
                 ) : (
                   <p className="whitespace-pre-wrap">{getMessageText(message)}</p>
