@@ -1,4 +1,6 @@
-import { streamText, convertToModelMessages, type UIMessage } from "ai";
+import { streamText, convertToModelMessages, type UIMessage, tool } from "ai";
+import { z } from "zod";
+import * as cheerio from "cheerio";
 import { geminiFlash } from "@/lib/gemini/model";
 import { AUDIT_SUMMARY_PROMPT } from "@/lib/gemini/prompts";
 
@@ -27,6 +29,41 @@ export async function POST(req: Request) {
     // convertToModelMessages translates UIMessage[] (client format with parts,
     // tool invocations, etc.) into the ModelMessage[] format the LLM expects.
     messages: await convertToModelMessages(messages),
+    tools: {
+      fetchMetaTags: tool({
+        description: "Fetch and parse meta tags (title, description, OpenGraph) from a given URL.",
+        parameters: z.object({
+          url: z.string().url("Must be a valid URL"),
+        }),
+        execute: async ({ url }) => {
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
+            const response = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+              throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
+            }
+            
+            const html = await response.text();
+            const $ = cheerio.load(html);
+            
+            return {
+              title: $("title").text() || null,
+              description: $("meta[name='description']").attr("content") || null,
+              ogTitle: $("meta[property='og:title']").attr("content") || null,
+              ogDescription: $("meta[property='og:description']").attr("content") || null,
+              ogImage: $("meta[property='og:image']").attr("content") || null,
+              canonicalUrl: $("link[rel='canonical']").attr("href") || null,
+            };
+          } catch (error: any) {
+            throw new Error(error.message || "Failed to fetch meta tags");
+          }
+        },
+      }),
+    },
   });
 
   // Return the stream as an HTTP response.
