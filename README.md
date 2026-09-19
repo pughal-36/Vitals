@@ -10,6 +10,30 @@ This feature converts the audit-summary AI into a real-time streaming interface 
 - **Model Config**: [`src/lib/gemini/model.ts`](file:///c:/Users/HP/Desktop/Vitals/src/lib/gemini/model.ts) — single provider factory that safely bridges the `GEMINI_API_KEY`.
 - **System Prompt**: [`src/lib/gemini/prompts.ts`](file:///c:/Users/HP/Desktop/Vitals/src/lib/gemini/prompts.ts) — extracted prompt module to keep config decoupled for FE-07.
 
+### Tool Contract: `fetchMetaTags`
+This project includes a server-side AI tool called `fetchMetaTags` that allows the assistant to retrieve OpenGraph and meta tag data from any valid URL.
+
+**Zod Schema:**
+```typescript
+{
+  url: z.string().url("Must be a valid URL")
+}
+```
+
+**Return Object Shape:**
+The tool fetches the HTML content server-side, parses it using `cheerio`, and returns the following structure. Fields are `null` if the corresponding tag is not found in the HTML.
+```typescript
+{
+  title: string | null,
+  description: string | null,
+  ogTitle: string | null,
+  ogDescription: string | null,
+  ogImage: string | null,
+  canonicalUrl: string | null,
+  error?: string // Present only if the fetch operation fails
+}
+```
+
 **Preview URL**: Visit `/chat` locally to test.
 
 ---
