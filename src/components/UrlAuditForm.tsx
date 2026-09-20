@@ -3,6 +3,7 @@
 import { useState, useRef, type FormEvent } from 'react'
 import type { AuditResult } from '@/app/api/audit/route'
 import { PillButton } from '@/components/PillButton'
+import { ScoreCard } from '@/components/ScoreCard'
 
 function isValidUrl(value: string): boolean {
   try {
@@ -12,6 +13,13 @@ function isValidUrl(value: string): boolean {
     return false
   }
 }
+
+const CATEGORY_META = [
+  { id: 'performance',     key: 'performance',  label: 'Performance'    },
+  { id: 'accessibility',   key: 'accessibility', label: 'Accessibility'  },
+  { id: 'best-practices',  key: 'bestPractices', label: 'Best practices' },
+  { id: 'seo',             key: 'seo',           label: 'SEO'            },
+] as const
 
 export default function UrlAuditForm() {
   const [urlValue, setUrlValue] = useState('')
@@ -73,6 +81,15 @@ export default function UrlAuditForm() {
   }
 
   const isLoading = status === 'loading'
+
+  // Format date per DESIGN.md
+  const formatDate = (iso: string) =>
+    new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso))
+
+  // Extract domain
+  const getDomain = (url: string) => {
+    try { return new URL(url).hostname } catch { return url }
+  }
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -148,14 +165,34 @@ export default function UrlAuditForm() {
         </div>
       )}
 
-      {/* Success — raw JSON for dev */}
+      {/* Success — Report */}
       {status === 'success' && result && result.ok && (
-        <div className="mt-8">
-          <p className="text-muted text-sm mb-4">
-            Scores loaded. The report display will be added in a later step.
-          </p>
+        <div className="mt-10">
+          {/* Report header */}
+          <div className="mb-6">
+            <h2 className="font-serif text-2xl text-ink">
+              Report for <em>{getDomain(result.url)}</em>
+            </h2>
+            <p className="text-muted text-sm mt-1">
+              Mobile · Fetched {formatDate(result.fetchedAt)}
+            </p>
+          </div>
+
+          {/* Four ScoreCards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+            {CATEGORY_META.map(({ id, key, label }) => (
+              <ScoreCard
+                key={id}
+                categoryId={id}
+                label={label}
+                score={result.scores[key]}
+              />
+            ))}
+          </div>
+
+          {/* Raw JSON (dev only) */}
           {process.env.NODE_ENV === 'development' && (
-            <details>
+            <details className="mt-4">
               <summary className="cursor-pointer text-sm text-muted hover:text-ink">View raw JSON</summary>
               <pre className="mt-3 p-4 rounded-2xl bg-card border border-line overflow-x-auto text-xs text-muted font-mono max-h-96">
                 {JSON.stringify(result.raw, null, 2)}
