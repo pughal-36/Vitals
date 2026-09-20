@@ -1,75 +1,87 @@
-import { listScans } from "@/lib/supabase/scans";
-import Link from "next/link";
+import { listScans } from '@/lib/supabase/scans'
+import { EmptyState } from '@/components/EmptyState'
+import { status, STATUS_LABEL, STATUS_COLOR } from '@/lib/scores'
+import type { Metadata } from 'next'
 
-function scoreColor(score: number | null): string {
-  if (!score) return "text-muted";
-  if (score >= 90) return "text-accent";
-  if (score >= 50) return "text-warning";
-  return "text-danger";
+export const metadata: Metadata = {
+  title: 'History',
+  description: 'Past PageSpeed audits, newest first.',
+}
+
+function StatusDot({ st }: { st: ReturnType<typeof status> }) {
+  const bg =
+    st === 'good' ? 'bg-good'
+    : st === 'warn' ? 'bg-warn'
+    : st === 'bad'  ? 'bg-bad'
+    : 'bg-muted'
+  return <span className={`inline-block w-2 h-2 rounded-full ${bg}`} aria-hidden="true" />
+}
+
+function ScorePill({ label, score }: { label: string; score: number | null }) {
+  const st = status(score)
+  return (
+    <div className="flex flex-col items-center gap-1 min-w-[48px]">
+      <div className="flex items-center gap-1">
+        <StatusDot st={st} />
+        <span className="text-sm text-ink tabular-nums font-serif">{score ?? '—'}</span>
+      </div>
+      <span className="text-xs text-muted">{label}</span>
+    </div>
+  )
 }
 
 export default async function HistoryPage() {
-  const scans = await listScans(50);
+  let scans: Awaited<ReturnType<typeof listScans>> = []
+  try {
+    scans = await listScans(50)
+  } catch {
+    // Supabase not configured — show empty state
+    scans = []
+  }
 
   return (
-    <main className="flex-1 flex flex-col items-center px-4 py-12 gap-8">
-      <section className="max-w-4xl w-full">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-foreground">Scan History</h1>
-            <p className="text-sm text-muted">All past PageSpeed audits, newest first.</p>
-          </div>
-        </div>
+    <main className="flex-1">
+      <div className="mx-auto max-w-4xl px-6 py-20 max-sm:py-12">
+        <h1 className="font-serif text-4xl max-sm:text-3xl text-ink mb-2">History</h1>
+        <p className="text-muted text-sm mb-8">All past audits, newest first.</p>
 
-        {/* Empty state */}
-        {scans.length === 0 && (
-          <div className="text-center py-24 text-muted">
-            <p className="text-lg font-medium mb-2">No scans yet</p>
-            <p className="text-sm">Run your first audit from the <Link href="/" className="text-primary underline underline-offset-2">home page</Link>.</p>
-          </div>
-        )}
-
-        {/* Scan list */}
-        {scans.length > 0 && (
+        {scans.length === 0 ? (
+          <EmptyState
+            illustration="empty"
+            title="No audits yet"
+            description="Paste a URL to run your first one."
+            action={{ label: 'Run audit', href: '/' }}
+          />
+        ) : (
           <div className="flex flex-col gap-3">
             {scans.map((scan) => (
               <div
                 key={scan.id}
-                className="rounded-2xl border border-border bg-surface px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-4"
+                className="bg-card border border-line rounded-2xl px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-4"
               >
                 {/* URL + timestamp */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{scan.url}</p>
+                  <p className="text-sm text-ink font-medium truncate">{scan.url}</p>
                   <p className="text-xs text-muted mt-0.5">
-                    {new Date(scan.created_at).toLocaleString()} · {scan.strategy}
+                    {new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(
+                      new Date(scan.created_at)
+                    )}{' '}
+                    · {scan.strategy}
                   </p>
                 </div>
 
                 {/* Score pills */}
-                <div className="flex gap-3 shrink-0 text-xs font-semibold tabular-nums">
-                  {([
-                    ["Perf", scan.score_performance],
-                    ["A11y", scan.score_accessibility],
-                    ["BP",   scan.score_best_practices],
-                    ["SEO",  scan.score_seo],
-                  ] as const).map(([label, score]) => (
-                    <span key={label} className={`flex flex-col items-center ${scoreColor(score)}`}>
-                      <span className="text-base leading-none">{score ?? "—"}</span>
-                      <span className="text-[10px] text-muted font-normal mt-0.5">{label}</span>
-                    </span>
-                  ))}
+                <div className="flex gap-4 shrink-0">
+                  <ScorePill label="Perf"  score={scan.score_performance}  />
+                  <ScorePill label="A11y"  score={scan.score_accessibility} />
+                  <ScorePill label="BP"    score={scan.score_best_practices} />
+                  <ScorePill label="SEO"   score={scan.score_seo}           />
                 </div>
               </div>
             ))}
           </div>
         )}
-      </section>
+      </div>
     </main>
-  );
+  )
 }
