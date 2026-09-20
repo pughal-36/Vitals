@@ -1,36 +1,25 @@
 import UrlAuditForm from '@/components/UrlAuditForm'
 import { FeatureRow, Band } from '@/components/LandingSections'
-
-/** Placeholder box used until SVG illustrations are converted (step 7) */
-function IllustrationPlaceholder({ filename, className = '' }: { filename: string; className?: string }) {
-  return (
-    <div
-      className={`bg-card border border-line rounded-2xl flex items-center justify-center text-muted text-xs ${className}`}
-      aria-hidden="true"
-    >
-      {filename}
-    </div>
-  )
-}
+import { Illustration } from '@/components/Illustration'
 
 const FEATURES = [
   {
-    illustrationSlot: <IllustrationPlaceholder filename="feature-performance.svg" className="w-24 h-24" />,
+    illustrationSlot: <Illustration name="feature-performance" width={96} height={96} />,
     title: 'Performance',
     body: 'Real Lighthouse scores for load time, interactivity and visual stability.',
   },
   {
-    illustrationSlot: <IllustrationPlaceholder filename="feature-seo.svg" className="w-24 h-24" />,
+    illustrationSlot: <Illustration name="feature-seo" width={96} height={96} />,
     title: 'SEO',
     body: 'See how easily search engines can crawl and index your pages.',
   },
   {
-    illustrationSlot: <IllustrationPlaceholder filename="feature-accessibility.svg" className="w-24 h-24" />,
+    illustrationSlot: <Illustration name="feature-accessibility" width={96} height={96} />,
     title: 'Accessibility',
     body: 'Check whether your site works for everyone, including assistive technology users.',
   },
   {
-    illustrationSlot: <IllustrationPlaceholder filename="feature-ai.svg" className="w-24 h-24" />,
+    illustrationSlot: <Illustration name="feature-ai" width={96} height={96} />,
     title: 'AI explanations',
     body: 'Ask Gemini to explain any score or suggest fixes in plain language.',
   },
@@ -59,8 +48,10 @@ export default function HomePage() {
           <UrlAuditForm />
         </div>
 
-        {/* Right: hero illustration placeholder */}
-        <IllustrationPlaceholder filename="hero.svg" className="hidden sm:flex w-72 h-72 shrink-0" />
+        {/* Right: hero illustration */}
+        <div className="hidden sm:block w-72 h-72 shrink-0">
+          <Illustration name="hero" width={288} height={288} />
+        </div>
       </section>
 
       {/* ─── Feature Row ─── */}
@@ -75,7 +66,7 @@ export default function HomePage() {
       <Band
         heading={<>Run your first <em>audit</em></>}
         body="Paste any URL above and get a full breakdown in under 30 seconds. No account needed."
-        illustrationSlot={<IllustrationPlaceholder filename="hero.svg" className="w-full h-full" />}
+        illustrationSlot={<Illustration name="hero" width="100%" height="100%" />}
       />
     </main>
   )
