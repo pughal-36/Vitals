@@ -1,92 +1,142 @@
 @import "tailwindcss";
 
-/* ─── Design Tokens (Tailwind v4 @theme) ─── */
-@theme inline {
-  /* Brand palette */
-  --color-primary: oklch(0.65 0.24 265);       /* Vibrant indigo-blue */
-  --color-primary-light: oklch(0.75 0.18 265);
-  --color-primary-dark: oklch(0.50 0.28 265);
-  --color-accent: oklch(0.72 0.20 160);         /* Teal-green for scores */
-  --color-accent-light: oklch(0.82 0.14 160);
-  --color-warning: oklch(0.78 0.18 75);         /* Amber for mid scores */
-  --color-danger: oklch(0.65 0.24 25);          /* Red-orange for poor */
+/* ─── Dark mode variant (Tailwind v4) ─── */
+@custom-variant dark (&:where(.dark, .dark *));
 
-  /* Surfaces */
-  --color-background: oklch(0.09 0.01 265);     /* Near-black */
-  --color-surface: oklch(0.14 0.015 265);       /* Card bg */
-  --color-surface-hover: oklch(0.18 0.02 265);
-  --color-border: oklch(0.25 0.02 265);
-
-  /* Text */
-  --color-foreground: oklch(0.95 0.005 265);
-  --color-muted: oklch(0.60 0.02 265);
-
-  /* Fonts */
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-
-  /* Spacing scale */
-  --spacing-18: 4.5rem;
-  --spacing-88: 22rem;
-  --spacing-120: 30rem;
-
-  /* Border radius */
-  --radius-xl: 1rem;
-  --radius-2xl: 1.25rem;
-
-  /* Shadows */
-  --shadow-glow: 0 0 40px oklch(0.65 0.24 265 / 0.15);
-
-  /* Transition */
-  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+/* ─── Design Tokens ─── */
+:root {
+  --paper:  #FBFAF7;
+  --card:   #F1EFEA;
+  --band:   #E0EAE1;
+  --ink:    #1A1A1A;
+  --muted:  #5F5F5A;
+  --sage:   #8FB996;
+  --line:   color-mix(in srgb, var(--ink) 14%, transparent);
+  --good:   #3F7F5A;
+  --warn:   #B57A1E;
+  --bad:    #B93F35;
+}
+.dark {
+  --paper:  #121412;
+  --card:   #1B1D1B;
+  --band:   #1C2620;
+  --ink:    #EDEBE6;
+  --muted:  #A5A39C;
+  --sage:   #8FB996;
+  --line:   color-mix(in srgb, var(--ink) 16%, transparent);
+  --good:   #8FB996;
+  --warn:   #E0B25A;
+  --bad:    #E47B6E;
 }
 
-/* ─── Base Styles ─── */
+/* ─── Tailwind v4 theme mapping ─── */
+@theme inline {
+  --color-paper:  var(--paper);
+  --color-card:   var(--card);
+  --color-band:   var(--band);
+  --color-ink:    var(--ink);
+  --color-muted:  var(--muted);
+  --color-sage:   var(--sage);
+  --color-line:   var(--line);
+  --color-good:   var(--good);
+  --color-warn:   var(--warn);
+  --color-bad:    var(--bad);
+
+  --font-serif: var(--font-serif-var);
+  --font-sans:  var(--font-sans-var);
+  --font-hand:  var(--font-hand-var);
+}
+
+/* ─── Base ─── */
 * {
   box-sizing: border-box;
 }
 
 body {
-  background: var(--color-background);
-  color: var(--color-foreground);
+  background: var(--paper);
+  color: var(--ink);
   font-family: var(--font-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ─── Utility Classes ─── */
-.glass {
-  background: oklch(0.14 0.015 265 / 0.6);
-  backdrop-filter: blur(16px) saturate(1.8);
-  border: 1px solid oklch(0.30 0.02 265 / 0.4);
-}
-
-.glow-ring {
-  box-shadow: var(--shadow-glow);
-}
-
-/* Smooth focus ring */
+/* ─── Focus ring ─── */
 :focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--sage);
   outline-offset: 2px;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
+/* ─── Pill button ─── */
+.pill-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  border-radius: 9999px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 150ms, color 150ms, border-color 150ms;
+  white-space: nowrap;
 }
-::-webkit-scrollbar-track {
+.pill-btn:focus-visible {
+  outline: 2px solid var(--sage);
+  outline-offset: 2px;
+}
+.pill-btn-solid {
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+}
+.pill-btn-solid:hover {
+  background: color-mix(in srgb, var(--ink) 85%, transparent);
+}
+.pill-btn-outline {
   background: transparent;
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
 }
-::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 3px;
+.pill-btn-outline:hover {
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.pill-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-/* Subtle gradient mesh background */
-.bg-mesh {
-  background-image:
-    radial-gradient(at 20% 80%, oklch(0.65 0.24 265 / 0.08) 0, transparent 50%),
-    radial-gradient(at 80% 20%, oklch(0.72 0.20 160 / 0.06) 0, transparent 50%),
-    radial-gradient(at 50% 50%, oklch(0.09 0.01 265) 0, oklch(0.09 0.01 265) 100%);
+/* ─── Sketch frame ─── */
+.sketch-frame {
+  position: relative;
+}
+.sketch-frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  filter: url(#wobble);
+}
+
+/* ─── Loading animation ─── */
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: spin-slow 2s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin-slow {
+    animation: none;
+  }
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 3px;
 }
