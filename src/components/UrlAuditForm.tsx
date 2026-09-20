@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useRef, type FormEvent } from 'react'
-import type { AuditResult } from '@/app/api/audit/route'
+import type { AuditResult, AuditSuccess } from '@/app/api/audit/route'
 import { PillButton } from '@/components/PillButton'
 import { ScoreCard } from '@/components/ScoreCard'
+import { MetricRow } from '@/components/MetricRow'
 
 function isValidUrl(value: string): boolean {
   try {
@@ -15,11 +16,125 @@ function isValidUrl(value: string): boolean {
 }
 
 const CATEGORY_META = [
-  { id: 'performance',     key: 'performance',  label: 'Performance'    },
-  { id: 'accessibility',   key: 'accessibility', label: 'Accessibility'  },
-  { id: 'best-practices',  key: 'bestPractices', label: 'Best practices' },
-  { id: 'seo',             key: 'seo',           label: 'SEO'            },
-] as const
+  { id: 'performance',    key: 'performance'  as const, label: 'Performance'    },
+  { id: 'accessibility',  key: 'accessibility' as const, label: 'Accessibility'  },
+  { id: 'best-practices', key: 'bestPractices' as const, label: 'Best practices' },
+  { id: 'seo',            key: 'seo'           as const, label: 'SEO'            },
+]
+
+const CORE_VITALS = [
+  { id: 'first-contentful-paint',  name: 'First contentful paint'  },
+  { id: 'largest-contentful-paint',name: 'Largest contentful paint' },
+  { id: 'total-blocking-time',     name: 'Total blocking time'      },
+  { id: 'cumulative-layout-shift', name: 'Cumulative layout shift'  },
+  { id: 'speed-index',             name: 'Speed index'              },
+]
+
+function formatDate(iso: string) {
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso))
+}
+
+function getDomain(url: string) {
+  try { return new URL(url).hostname } catch { return url }
+}
+
+function ReportView({ result }: { result: AuditSuccess }) {
+  const audits = result.audits ?? {}
+
+  // Opportunities: audits where overallSavingsMs > 0, sorted by savings desc
+  const opportunities = Object.values(audits)
+    .filter((a) => {
+      const savings = (a.details as { overallSavingsMs?: number } | undefined)?.overallSavingsMs
+      return savings != null && savings > 0
+    })
+    .sort((a, b) => {
+      const sa = (a.details as { overallSavingsMs?: number } | undefined)?.overallSavingsMs ?? 0
+      const sb = (b.details as { overallSavingsMs?: number } | undefined)?.overallSavingsMs ?? 0
+      return sb - sa
+    })
+
+  return (
+    <div className="mt-10">
+      {/* Report header */}
+      <div className="mb-6">
+        <h2 className="font-serif text-2xl text-ink">
+          Report for <em>{getDomain(result.url)}</em>
+        </h2>
+        <p className="text-muted text-sm mt-1">
+          Mobile · Fetched {formatDate(result.fetchedAt)}
+        </p>
+      </div>
+
+      {/* Four ScoreCards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+        {CATEGORY_META.map(({ id, key, label }) => (
+          <ScoreCard
+            key={id}
+            categoryId={id}
+            label={label}
+            score={result.scores[key]}
+          />
+        ))}
+      </div>
+
+      {/* Core Web Vitals */}
+      <section className="mb-8" aria-labelledby="cwv-heading">
+        <h3 className="font-serif font-bold text-lg text-ink mb-2" id="cwv-heading">
+          Core Web Vitals
+        </h3>
+        <div className="bg-card border border-line rounded-2xl px-5">
+          {CORE_VITALS.map(({ id, name }) => {
+            const audit = audits[id]
+            return (
+              <MetricRow
+                key={id}
+                name={name}
+                displayValue={audit?.displayValue}
+                score={audit?.score ?? null}
+              />
+            )
+          })}
+        </div>
+      </section>
+
+      {/* Opportunities */}
+      <section className="mb-8" aria-labelledby="opp-heading">
+        <h3 className="font-serif font-bold text-lg text-ink mb-2" id="opp-heading">
+          Opportunities
+        </h3>
+        <div className="bg-card border border-line rounded-2xl px-5">
+          {opportunities.length === 0 ? (
+            <p className="text-sm text-muted py-4">No speed opportunities found.</p>
+          ) : (
+            opportunities.map((a) => {
+              const savings = (a.details as { overallSavingsMs?: number } | undefined)?.overallSavingsMs ?? 0
+              const secs = (savings / 1000).toFixed(1)
+              return (
+                <div
+                  key={a.title}
+                  className="flex items-center justify-between gap-4 py-3 border-b border-line last:border-0"
+                >
+                  <span className="text-sm text-ink">{a.title}</span>
+                  <span className="text-sm text-muted shrink-0">Could save about {secs} s</span>
+                </div>
+              )
+            })
+          )}
+        </div>
+      </section>
+
+      {/* Raw JSON (dev only) */}
+      {process.env.NODE_ENV === 'development' && (
+        <details className="mt-4">
+          <summary className="cursor-pointer text-sm text-muted hover:text-ink select-none">View raw JSON</summary>
+          <pre className="mt-3 p-4 rounded-2xl bg-card border border-line overflow-x-auto text-xs text-muted font-mono max-h-96">
+            {JSON.stringify(result.raw, null, 2)}
+          </pre>
+        </details>
+      )}
+    </div>
+  )
+}
 
 export default function UrlAuditForm() {
   const [urlValue, setUrlValue] = useState('')
@@ -81,15 +196,6 @@ export default function UrlAuditForm() {
   }
 
   const isLoading = status === 'loading'
-
-  // Format date per DESIGN.md
-  const formatDate = (iso: string) =>
-    new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso))
-
-  // Extract domain
-  const getDomain = (url: string) => {
-    try { return new URL(url).hostname } catch { return url }
-  }
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -165,41 +271,9 @@ export default function UrlAuditForm() {
         </div>
       )}
 
-      {/* Success — Report */}
+      {/* Success — full report */}
       {status === 'success' && result && result.ok && (
-        <div className="mt-10">
-          {/* Report header */}
-          <div className="mb-6">
-            <h2 className="font-serif text-2xl text-ink">
-              Report for <em>{getDomain(result.url)}</em>
-            </h2>
-            <p className="text-muted text-sm mt-1">
-              Mobile · Fetched {formatDate(result.fetchedAt)}
-            </p>
-          </div>
-
-          {/* Four ScoreCards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-            {CATEGORY_META.map(({ id, key, label }) => (
-              <ScoreCard
-                key={id}
-                categoryId={id}
-                label={label}
-                score={result.scores[key]}
-              />
-            ))}
-          </div>
-
-          {/* Raw JSON (dev only) */}
-          {process.env.NODE_ENV === 'development' && (
-            <details className="mt-4">
-              <summary className="cursor-pointer text-sm text-muted hover:text-ink">View raw JSON</summary>
-              <pre className="mt-3 p-4 rounded-2xl bg-card border border-line overflow-x-auto text-xs text-muted font-mono max-h-96">
-                {JSON.stringify(result.raw, null, 2)}
-              </pre>
-            </details>
-          )}
-        </div>
+        <ReportView result={result} />
       )}
     </div>
   )
