@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 }
 
 const navLinks = [
-  { href: '/', label: 'Home' },
+  { href: '/',        label: 'Home'    },
   { href: '/history', label: 'History' },
   { href: '/compare', label: 'Compare' },
 ]
@@ -47,22 +47,28 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <header>
             <nav className="border-b border-line" aria-label="Main navigation">
               <div className="mx-auto max-w-6xl flex items-center justify-between px-6 h-14">
-                {/* Logo */}
+
+                {/* Logo: "Vitals" in serif with bolt icon */}
                 <Link href="/" className="flex items-center gap-2" id="nav-logo">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <svg
+                    width="18" height="18" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor"
+                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
                     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
                   </svg>
-                  <span className="text-xl font-serif font-normal text-ink">Vitals</span>
+                  <span className="text-xl font-serif text-ink">Vitals</span>
                 </Link>
 
-                {/* Nav links (desktop) */}
+                {/* Desktop nav links */}
                 <ul className="hidden sm:flex items-center gap-6" role="list">
                   {navLinks.map(({ href, label }) => (
                     <li key={href}>
                       <Link
                         href={href}
                         id={`nav-${label.toLowerCase()}`}
-                        className="text-sm text-muted hover:text-ink transition-colors underline-offset-4 hover:underline"
+                        className="text-sm text-muted hover:text-ink underline-offset-4 hover:underline transition-colors"
                       >
                         {label}
                       </Link>
@@ -70,11 +76,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   ))}
                 </ul>
 
-                {/* Right: theme toggle + mobile menu placeholder */}
+                {/* Right side: theme toggle + mobile links */}
                 <div className="flex items-center gap-3">
                   <ThemeToggle />
-                  {/* Mobile nav — simple links visible below sm */}
-                  <ul className="flex sm:hidden items-center gap-3" role="list">
+                  {/* Mobile: abbreviated links */}
+                  <ul className="flex sm:hidden items-center gap-4" role="list">
                     {navLinks.map(({ href, label }) => (
                       <li key={href}>
                         <Link
@@ -82,12 +88,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                           id={`nav-mob-${label.toLowerCase()}`}
                           className="text-sm text-muted hover:text-ink transition-colors"
                         >
-                          {label.charAt(0)}
+                          {label}
                         </Link>
                       </li>
                     ))}
                   </ul>
                 </div>
+
               </div>
             </nav>
           </header>

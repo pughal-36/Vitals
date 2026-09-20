@@ -1,51 +1,36 @@
-import UrlAuditForm from "@/components/UrlAuditForm";
+import UrlAuditForm from '@/components/UrlAuditForm'
 
-/* ─── Page Component ─── */
 export default function HomePage() {
   return (
-    <main className="flex-1 flex flex-col items-center px-4 py-12 sm:py-20 gap-16">
-      {/* Hero Section */}
-      <section className="max-w-3xl w-full text-center" id="hero">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass text-xs font-medium text-muted mb-6">
-          <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-          Powered by Google PageSpeed Insights &amp; Gemini
-        </div>
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground mb-4 leading-[1.1]">
-          Audit your site&rsquo;s{" "}
-          <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Web Vitals
-          </span>
-        </h1>
-        <p className="text-lg sm:text-xl text-muted max-w-xl mx-auto mb-8">
-          Enter any URL to get a real-time PageSpeed score, SEO audit, and
-          AI‑powered optimisation summary — all in one place.
-        </p>
-
-        {/* Interactive URL form — client component */}
-        <UrlAuditForm />
-      </section>
-
-      {/* How Vitals works + AI disclaimer (item 10) */}
+    <main className="flex-1">
+      {/* ─── Hero ─── */}
       <section
-        className="max-w-2xl w-full text-center border-t border-border/40 pt-10"
-        id="how-it-works"
-        aria-label="How Vitals works"
+        className="mx-auto max-w-6xl px-6 py-20 max-sm:py-12 flex flex-col sm:flex-row items-center gap-12"
+        id="hero"
+        aria-labelledby="hero-heading"
       >
-        <h2 className="text-base font-semibold text-foreground mb-2">How Vitals works</h2>
-        <p className="text-sm text-muted mb-3">
-          Vitals sends your URL to the{" "}
-          <span className="text-foreground font-medium">Google PageSpeed Insights API</span>{" "}
-          to run a real Lighthouse audit, then surfaces the scores here.
-          Head to the{" "}
-          <a href="/chat" className="text-primary underline-offset-4 hover:underline">
-            Chat tab
-          </a>{" "}
-          to ask Gemini Flash for tailored optimisation advice based on the results.
-        </p>
-        <p className="text-xs text-muted/70 italic">
-          ⚠ AI-generated insights are produced by Gemini and may be inaccurate — always verify recommendations before applying them in production.
-        </p>
+        {/* Left: heading + subtitle + form */}
+        <div className="flex-1 min-w-0">
+          <h1
+            id="hero-heading"
+            className="font-serif text-5xl max-sm:text-4xl text-ink leading-[1.1] mb-4"
+          >
+            Audit your site&apos;s <em>Web Vitals</em>
+          </h1>
+          <p className="text-base text-ink leading-relaxed max-w-[65ch] mb-8">
+            Paste a URL to get performance, accessibility, best-practices and SEO scores.
+          </p>
+          <UrlAuditForm />
+        </div>
+
+        {/* Right: hero illustration placeholder (wired in step 7) */}
+        <div
+          className="hidden sm:flex items-center justify-center w-72 h-72 rounded-2xl bg-card border border-line shrink-0 text-muted text-sm"
+          aria-hidden="true"
+        >
+          hero.svg
+        </div>
       </section>
     </main>
-  );
+  )
 }
