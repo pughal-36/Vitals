@@ -1,6 +1,11 @@
 # Vitals Dashboard
 *SEO & Performance Audit Dashboard (Week 3 Capstone)*
 
+## FE Track assignment log
+
+- **FE-06: Streaming AI Chat Interface** - Built a Gemini-backed streaming audit chat with `useChat`, thinking and streaming states, markdown rendering, stop and auto-scroll controls, and a server-side route handler. [Evidence: commit `4169e32`](https://github.com/pughal-36/Vitals/commit/4169e3207786cf4071e00c1695555ec01dcd039f)
+- **FE-07 — Tool calling & generative UI** - Added the server-side `fetchMetaTags` tool and typed tool-part lifecycle states for streaming, results, and errors in the chat UI; the confirmation-tool requirement was skipped because this capstone does not currently mutate data from chat. [Evidence: commit `8c283a7`](https://github.com/pughal-36/Vitals/commit/8c283a79e1aa33bc4534b3bc01f115e02dede614)
+
 ## FE-06: Streaming AI Chat Interface
 This feature converts the audit-summary AI into a real-time streaming interface using the Vercel AI SDK and Gemini Flash.
 
