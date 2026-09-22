@@ -30,9 +30,11 @@ The tool fetches the HTML content server-side, parses it using `cheerio`, and re
   ogDescription: string | null,
   ogImage: string | null,
   canonicalUrl: string | null,
-  error?: string // Present only if the fetch operation fails
 }
 ```
+
+**Error Handling:**
+If the URL fetch fails, times out, or returns a non-OK status, the `execute` function will **throw an Error**. The AI SDK will catch this and emit an `output-error` UI message part to the client.
 
 **Preview URL**: Visit `/chat` locally to test.
 

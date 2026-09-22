@@ -60,6 +60,9 @@ export async function POST(req: Request) {
         },
       }),
     },
+    onError: ({ error }) => {
+      console.error("streamText error:", error);
+    },
   });
 
   // Return the stream as an HTTP response.
@@ -67,5 +70,10 @@ export async function POST(req: Request) {
   // stream in the protocol that useChat understands (text parts, tool calls,
   // step boundaries, etc.). This is NOT the same as NextResponse.json() —
   // JSON requires the full response to be buffered before sending.
-  return result.toUIMessageStreamResponse();
+  return result.toUIMessageStreamResponse({
+    onError: (error) => {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return `An error occurred: ${errorMessage}`;
+    },
+  });
 }
