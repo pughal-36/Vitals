@@ -32,10 +32,9 @@ export async function POST(req: Request) {
     tools: {
       fetchMetaTags: tool({
         description: "Fetch and parse meta tags (title, description, OpenGraph) from a given URL.",
-        parameters: z.object({
+        inputSchema: z.object({
           url: z.string().url("Must be a valid URL"),
         }),
-        // @ts-expect-error - Zod inference mismatch with AI SDK tool overload
         execute: async ({ url }) => {
           try {
             const controller = new AbortController();
