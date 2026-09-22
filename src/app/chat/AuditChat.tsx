@@ -24,17 +24,14 @@ import { useState, useRef, useEffect, useCallback, type FormEvent } from "react"
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-// ─── Tool Invocation UI Component ───
-function ToolInvocationUI({ toolInvocation }: { toolInvocation: any }) {
-  if (toolInvocation.toolName !== 'fetchMetaTags') {
-    return null;
-  }
+// ─── Tool Part UI Component ───
+// AI SDK v7 generates typed tool parts: { type: "tool-fetchMetaTags", state, input, output, errorText, toolCallId }
+// States: input-streaming → input-available → output-available | output-error
+function FetchMetaTagsUI({ part }: { part: any }) {
+  const url = part.input?.url || "url";
 
-  const { state, args, result } = toolInvocation;
-  const url = args?.url || "url";
-
-  // input-streaming
-  if (state === 'partial-call') {
+  // input-streaming: model is still generating the tool input args
+  if (part.state === 'input-streaming') {
     return (
       <div className="flex items-center gap-2 text-sm text-muted animate-pulse py-2">
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -45,8 +42,8 @@ function ToolInvocationUI({ toolInvocation }: { toolInvocation: any }) {
     );
   }
 
-  // input-available
-  if (state === 'call') {
+  // input-available: args are ready, server is executing the tool
+  if (part.state === 'input-available') {
     return (
       <div className="flex items-center gap-3 p-4 rounded-xl border border-border bg-surface my-2 shadow-sm transition-opacity duration-200">
         <div className="w-5 h-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
@@ -55,37 +52,24 @@ function ToolInvocationUI({ toolInvocation }: { toolInvocation: any }) {
     );
   }
 
-  // output-available or output-error
-  if (state === 'result') {
-    if (result && result.error) {
-      return (
-        <div className="p-4 rounded-xl border border-danger/30 bg-danger/10 text-danger my-2 shadow-sm transition-opacity duration-200">
-          <div className="flex items-center gap-2 font-semibold mb-2">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            Error fetching meta tags
-          </div>
-          <div className="text-sm opacity-90">{result.error}</div>
+  // output-error: the execute function threw an error
+  if (part.state === 'output-error') {
+    return (
+      <div className="p-4 rounded-xl border border-danger/30 bg-danger/10 text-danger my-2 shadow-sm transition-opacity duration-200">
+        <div className="flex items-center gap-2 font-semibold mb-2">
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          Error fetching meta tags
         </div>
-      );
-    }
-    
-    if (typeof result === 'string') {
-       return (
-        <div className="p-4 rounded-xl border border-danger/30 bg-danger/10 text-danger my-2 shadow-sm transition-opacity duration-200">
-          <div className="flex items-center gap-2 font-semibold mb-2">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            Error fetching meta tags
-          </div>
-          <div className="text-sm opacity-90">{result}</div>
-        </div>
-      );
-    }
+        <div className="text-sm opacity-90">{part.errorText}</div>
+      </div>
+    );
+  }
 
-    const { title, description, ogTitle, ogDescription, ogImage, canonicalUrl } = result || {};
+  // output-available: tool succeeded, render the result table
+  if (part.state === 'output-available') {
+    const { title, description, ogTitle, ogDescription, ogImage, canonicalUrl } = part.output || {};
 
     const renderField = (label: string, value: string | null | undefined, isImage: boolean = false) => {
       if (!value) {
@@ -284,8 +268,8 @@ export default function AuditChat() {
                             )}
                           </div>
                         );
-                      } else if (part.type === "tool-invocation") {
-                        return <ToolInvocationUI key={part.toolCallId} toolInvocation={part} />;
+                      } else if (part.type === "tool-fetchMetaTags") {
+                        return <FetchMetaTagsUI key={part.toolCallId} part={part} />;
                       }
                       return null;
                     })}
