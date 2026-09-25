@@ -1,98 +1,47 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { DM_Mono, Space_Grotesk } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const geometric = Space_Grotesk({ variable: "--font-geometric", subsets: ["latin"] });
+const instrument = DM_Mono({ variable: "--font-instrument", subsets: ["latin"], weight: ["400", "500"] });
 
 export const metadata: Metadata = {
-  title: {
-    default: "Vitals — Web Performance & SEO Audit Dashboard",
-    template: "%s | Vitals",
-  },
-  description:
-    "Audit any website's Core Web Vitals and PageSpeed score instantly, then get AI-powered optimisation tips from Gemini.",
-  icons: {
-    icon: "/favicon.ico",
-  },
-  openGraph: {
-    title: "Vitals — Web Performance & SEO Audit Dashboard",
-    description: "Audit any website's Core Web Vitals and PageSpeed score instantly.",
-    type: "website",
-  },
+  title: { default: "Vitals — SEO Audit Tool", template: "%s | Vitals" },
+  description: "A calm, calibrated first-pass SEO audit instrument.",
+  icons: { icon: "/favicon.ico" },
 };
 
 const navLinks = [
-  { href: "/", label: "Home", icon: "⚡" },
-  { href: "/history", label: "History", icon: "📋" },
-  { href: "/compare", label: "Compare", icon: "⚖️" },
+  { href: "/", label: "AUDIT" },
+  { href: "/results", label: "READOUT" },
+  { href: "/chat", label: "ASSISTANT" },
 ];
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col bg-mesh">
-        {/* ─── Navigation ─── */}
-        <nav className="sticky top-0 z-50 glass border-b border-border/40">
-          <div className="mx-auto max-w-6xl flex items-center justify-between px-4 sm:px-6 h-16">
-            {/* Logo */}
-            <Link
-              href="/"
-              className="flex items-center gap-2 group"
-              id="nav-logo"
-            >
-              <span className="text-2xl" aria-hidden="true">
-                ⚡
-              </span>
-              <span className="text-xl font-bold tracking-tight text-foreground group-hover:text-primary transition-colors duration-200">
-                Vitals
-              </span>
+    <html lang="en" className={`${geometric.variable} ${instrument.variable}`}>
+      <body className="min-h-screen flex flex-col">
+        <nav className="vitals-nav sticky top-0 z-50">
+          <div className="vitals-nav-inner mx-auto flex items-center justify-between px-4 sm:px-6">
+            <Link href="/" className="flex items-center gap-2.5" aria-label="Vitals home">
+              <span className="vitals-logo-mark" aria-hidden="true"><span /></span>
+              <span className="vitals-logo-word text-sm">VITALS</span>
+              <span className="vitals-logo-tag hidden sm:inline">SEO AUDIT</span>
             </Link>
-
-            {/* Nav Links */}
-            <ul className="flex items-center gap-1 sm:gap-2">
-              {navLinks.map(({ href, label, icon }) => (
-                <li key={href}>
-                  <Link
-                    href={href}
-                    id={`nav-${label.toLowerCase()}`}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium text-muted hover:text-foreground hover:bg-surface-hover transition-all duration-200"
-                  >
-                    <span className="hidden sm:inline" aria-hidden="true">
-                      {icon}
-                    </span>
-                    {label}
-                  </Link>
-                </li>
+            <div className="flex items-center gap-1 sm:gap-2">
+              {navLinks.map(({ href, label }) => (
+                <Link key={href} href={href} className="vitals-nav-link rounded-sm px-3 py-2" data-nav-label={label}>
+                  {label}
+                </Link>
               ))}
-            </ul>
+              <span className="hidden sm:flex items-center gap-2 ml-4 text-[9px] font-mono tracking-[.08em] text-[#2B2E33]"><span className="w-1.5 h-1.5 rounded-full bg-[#E8A33D]" /> SYSTEM ONLINE</span>
+            </div>
           </div>
         </nav>
-
-        {/* ─── Main Content ─── */}
         <div className="flex-1 flex flex-col">{children}</div>
-
-        {/* ─── Footer ─── */}
-        <footer className="border-t border-border/40 py-6 text-center text-sm text-muted">
-          <p>
-            Vitals &mdash; Week 3 Capstone &middot; Built with Next.js,
-            Tailwind &amp; Gemini
-          </p>
+        <footer className="border-t border-[#AEB4BA] bg-[#202226] py-5 text-center text-[9px] font-mono tracking-[.08em] text-[#858C92]">
+          <p>VITALS &mdash; A QUIET SEO INSTRUMENT FOR LOUDER SIGNALS.</p>
         </footer>
       </body>
     </html>

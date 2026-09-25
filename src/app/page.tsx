@@ -3,7 +3,7 @@ import UrlAuditForm from "@/components/UrlAuditForm";
 /* ─── Page Component ─── */
 export default function HomePage() {
   return (
-    <main className="flex-1 flex flex-col items-center px-4 py-12 sm:py-20 gap-16">
+    <main className="vitals-home flex-1 flex flex-col items-center px-4 py-12 sm:py-20 gap-16">
       {/* Hero Section */}
       <section className="max-w-3xl w-full text-center" id="hero">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass text-xs font-medium text-muted mb-6">
