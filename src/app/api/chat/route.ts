@@ -19,61 +19,108 @@ import { AUDIT_SUMMARY_PROMPT } from "@/lib/gemini/prompts";
 //      automatically. This replaced toDataStreamResponse() in AI SDK v7.
 
 export async function POST(req: Request) {
-  // useChat sends { messages: UIMessage[] } automatically on each submit.
-  const { messages }: { messages: UIMessage[] } = await req.json();
+  try {
+    const body = await req.json();
+    const messages: UIMessage[] = body.messages;
 
-  // streamText returns synchronously — the streaming is lazy.
-  const result = streamText({
-    model: geminiFlash,
-    system: AUDIT_SUMMARY_PROMPT,
-    // convertToModelMessages translates UIMessage[] (client format with parts,
-    // tool invocations, etc.) into the ModelMessage[] format the LLM expects.
-    messages: await convertToModelMessages(messages),
-    tools: {
-      fetchMetaTags: tool({
-        description: "Fetch and parse meta tags (title, description, OpenGraph) from a given URL.",
-        inputSchema: z.object({
-          url: z.string().url("Must be a valid URL"),
+    // Validate input server-side: reject empty or missing messages
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return Response.json(
+        { error: "Messages are required", code: "invalid_input" },
+        { status: 400 }
+      );
+    }
+
+    // Validate input server-side: reject empty or whitespace-only user messages
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage.role === "user") {
+      const hasContent = lastMessage.parts?.some(part => {
+        if (part.type === "text") return part.text.trim().length > 0;
+        return true; // Any non-text part (like files) is considered content
+      });
+
+      if (!hasContent) {
+        return Response.json(
+          { error: "Message cannot be empty", code: "invalid_input" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // streamText returns synchronously — the streaming is lazy.
+    const result = streamText({
+      model: geminiFlash,
+      system: AUDIT_SUMMARY_PROMPT,
+      // convertToModelMessages translates UIMessage[] (client format with parts,
+      // tool invocations, etc.) into the ModelMessage[] format the LLM expects.
+      messages: await convertToModelMessages(messages),
+      tools: {
+        fetchMetaTags: tool({
+          description: "Fetch and parse meta tags (title, description, OpenGraph) from a given URL.",
+          inputSchema: z.object({
+            url: z.string().url("Must be a valid URL"),
+          }),
+          execute: async ({ url }) => {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+            const response = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+              throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
+            }
+
+            const html = await response.text();
+            const $ = cheerio.load(html);
+
+            return {
+              title: $("title").text() || null,
+              description: $("meta[name='description']").attr("content") || null,
+              ogTitle: $("meta[property='og:title']").attr("content") || null,
+              ogDescription: $("meta[property='og:description']").attr("content") || null,
+              ogImage: $("meta[property='og:image']").attr("content") || null,
+              canonicalUrl: $("link[rel='canonical']").attr("href") || null,
+            };
+          },
         }),
-        execute: async ({ url }) => {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
+      },
+    });
 
-          const response = await fetch(url, { signal: controller.signal });
-          clearTimeout(timeoutId);
+    // Return the stream as an HTTP response.
+    // toUIMessageStreamResponse() sets the correct headers and encodes the
+    // stream in the protocol that useChat understands.
+    return result.toUIMessageStreamResponse({
+      onError: (error) => {
+        // Mask the raw error and avoid leaking stack traces mid-stream
+        console.error("Mid-stream error:", error);
+        return "An error occurred while generating the response. Please try again.";
+      },
+    });
+  } catch (error: any) {
+    console.error("Chat route handler error:", error);
 
-          if (!response.ok) {
-            throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
-          }
+    // Determine the status code based on the error
+    const statusCode = typeof error?.statusCode === "number" ? error.statusCode : undefined;
 
-          const html = await response.text();
-          const $ = cheerio.load(html);
+    if (statusCode === 429 || error?.name === "RateLimitError") {
+      return Response.json(
+        { error: "Rate limit exceeded. Please try again later.", code: "rate_limit" },
+        { status: 429 }
+      );
+    }
 
-          return {
-            title: $("title").text() || null,
-            description: $("meta[name='description']").attr("content") || null,
-            ogTitle: $("meta[property='og:title']").attr("content") || null,
-            ogDescription: $("meta[property='og:description']").attr("content") || null,
-            ogImage: $("meta[property='og:image']").attr("content") || null,
-            canonicalUrl: $("link[rel='canonical']").attr("href") || null,
-          };
-        },
-      }),
-    },
-    onError: ({ error }) => {
-      console.error("streamText error:", error);
-    },
-  });
+    if (statusCode === 500 || statusCode === 502 || error?.name === "APICallError") {
+      return Response.json(
+        { error: "The AI provider encountered an error. Please try again.", code: "upstream_model_error" },
+        { status: statusCode >= 500 ? statusCode : 502 }
+      );
+    }
 
-  // Return the stream as an HTTP response.
-  // toUIMessageStreamResponse() sets the correct headers and encodes the
-  // stream in the protocol that useChat understands (text parts, tool calls,
-  // step boundaries, etc.). This is NOT the same as NextResponse.json() —
-  // JSON requires the full response to be buffered before sending.
-  return result.toUIMessageStreamResponse({
-    onError: (error) => {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      return `An error occurred: ${errorMessage}`;
-    },
-  });
+    // Generic fallback for any other setup errors
+    return Response.json(
+      { error: "An unexpected internal error occurred.", code: "internal_server_error" },
+      { status: 500 }
+    );
+  }
 }
