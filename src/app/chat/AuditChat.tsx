@@ -140,15 +140,49 @@ function FetchMetaTagsUI({ part }: { part: any }) {
   return null;
 }
 
-export default function AuditChat() {
-  // ─── useChat hook ───
-  // By default it POSTs to /api/chat, which is exactly where our route handler lives.
+export default function AuditChat({ 
+  scanId, 
+  initialMessages = [], 
+  initialChips = [] 
+}: { 
+  scanId?: string; 
+  initialMessages?: UIMessage[]; 
+  initialChips?: string[] 
+}) {
   const { messages, sendMessage, stop, status, setMessages } = useChat();
 
-  // ─── Local state for the text input ───
-  // In AI SDK v7 useChat doesn't manage input state for us like v3 did,
-  // so we manage it ourselves.
   const [input, setInput] = useState("");
+  const [chips, setChips] = useState<string[]>(initialChips);
+
+  useEffect(() => {
+    if (scanId) {
+      document.cookie = `scanId=${scanId}; path=/; max-age=86400`;
+    }
+  }, [scanId]);
+
+  useEffect(() => {
+    if (initialMessages.length > 0) {
+      setMessages(initialMessages);
+    }
+  }, [initialMessages, setMessages]);
+
+  useEffect(() => {
+    if (status !== "streaming" && status !== "submitted") {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage && lastMessage.role === "assistant") {
+        const text = getMessageText(lastMessage);
+        const match = text.match(/<chips>([\s\S]*?)<\/chips>/);
+        if (match) {
+          try {
+            const parsed = JSON.parse(match[1]);
+            if (Array.isArray(parsed)) {
+              setChips(parsed);
+            }
+          } catch (e) {}
+        }
+      }
+    }
+  }, [messages, status]);
 
   // ─── Refs ───
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -193,13 +227,17 @@ export default function AuditChat() {
     const trimmed = input.trim();
     if (!trimmed || isGenerating) return;
 
-    // sendMessage appends the user message and triggers the API call.
-    // useChat auto-sends the full messages array to /api/chat.
     sendMessage({ text: trimmed });
     setInput("");
 
     // Refocus the input after sending.
     inputRef.current?.focus();
+  };
+
+  const handleChipClick = (chipText: string) => {
+    if (isGenerating) return;
+    sendMessage({ text: chipText });
+    setIsAtBottom(true);
   };
 
   // ─── Extract text from message parts ───
@@ -257,7 +295,7 @@ export default function AuditChat() {
                         return (
                           <div key={partIdx} className="prose prose-invert prose-sm max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {part.text}
+                              {part.text.replace(/<chips>[\s\S]*?<\/chips>/g, "")}
                             </ReactMarkdown>
                             {/* Streaming/typing indicator — blinking cursor while tokens arrive */}
                             {isStreaming && partIdx === message.parts.length - 1 && (
@@ -275,18 +313,14 @@ export default function AuditChat() {
                     })}
                   </div>
                 ) : (
-                  <p className="whitespace-pre-wrap">{getMessageText(message)}</p>
+                  <p className="whitespace-pre-wrap">{getMessageText(message).replace(/<chips>[\s\S]*?<\/chips>/g, "")}</p>
                 )}
               </div>
             </div>
           );
         })}
 
-        {/* ─── Thinking indicator ───
-            Shows when status is "submitted" (request sent, waiting for first token).
-            When status moves to "streaming", the assistant message appears in messages[]
-            automatically, so this indicator disappears naturally — no flicker because
-            the indicator and the first token are never both visible at the same time. */}
+        {/* ─── Thinking indicator ─── */}
         {status === "submitted" && (
           <div className="flex justify-start">
             <div className="bg-surface border border-border rounded-2xl rounded-bl-md px-4 py-3 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -319,7 +353,22 @@ export default function AuditChat() {
         <div ref={bottomRef} />
       </div>
 
-      {/* ─── Jump to latest button ───
+      {/* ─── Chips UI ─── */}
+      {chips.length > 0 && !isGenerating && (
+        <div className="flex flex-wrap items-center gap-2 py-2 w-full animate-in fade-in slide-in-from-bottom-4 duration-300">
+          {chips.map((chip, i) => (
+            <button
+              key={i}
+              onClick={() => handleChipClick(chip)}
+              className="text-xs px-3 py-1.5 rounded-full border border-border bg-surface text-foreground hover:bg-surface-hover transition-colors shadow-sm"
+            >
+              {chip}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ─── Jump to latest button ─── 
           Only visible when the user has scrolled up and there are messages. */}
       {!isAtBottom && messages.length > 0 && (
         <div className="flex justify-center -mt-12 mb-2 relative z-10">

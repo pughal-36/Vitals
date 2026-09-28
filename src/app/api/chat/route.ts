@@ -18,16 +18,66 @@ import { AUDIT_SUMMARY_PROMPT } from "@/lib/gemini/prompts";
 //      Stream Protocol" — a format that useChat on the client parses
 //      automatically. This replaced toDataStreamResponse() in AI SDK v7.
 
-export async function POST(req: Request) {
-  // useChat sends { messages: UIMessage[] } automatically on each submit.
-  const { messages }: { messages: UIMessage[] } = await req.json();
+import { cookies } from "next/headers";
 
-  // streamText returns synchronously — the streaming is lazy.
+export async function POST(req: Request) {
+  const { messages }: { messages: UIMessage[] } = await req.json();
+  const cookieStore = await cookies();
+  const scanId = cookieStore.get("scanId")?.value;
+
+  const getMessageText = (message: UIMessage): string => {
+    return message.parts
+      ? message.parts.filter((part: any) => part.type === "text").map((part: any) => part.text).join("")
+      : (message as any).text || (message as any).content || "";
+  };
+
+  let systemPrompt = AUDIT_SUMMARY_PROMPT;
+  
+  // Extract the latest user message to save it
+  const latestUserMessage = messages[messages.length - 1];
+
+  if (scanId) {
+    try {
+      // 1. Save user message to Supabase
+      if (latestUserMessage && latestUserMessage.role === "user") {
+        const { getSupabaseClient } = await import("@/lib/supabase/client");
+        await (getSupabaseClient() as any).from("chat_messages").insert({
+          scan_id: scanId,
+          role: "user",
+          content: getMessageText(latestUserMessage)
+        });
+      }
+
+      // 2. Load scan and build dynamic system prompt
+      const { getScanById } = await import("@/lib/supabase/scans");
+      const scan = await getScanById(scanId);
+      if (scan) {
+        const failingAudits = (scan.raw_categories as any)?.failingAudits || [];
+        const top5 = failingAudits.slice(0, 5).map((a: any) => `- ${a.title}: ${a.description} (Score: ${a.score})`).join("\n");
+        systemPrompt = `
+You are an expert SEO and Web Performance assistant.
+The user is asking about their website: ${scan.url}
+Scores:
+Performance: ${scan.score_performance}
+SEO: ${scan.score_seo}
+Accessibility: ${scan.score_accessibility}
+Best Practices: ${scan.score_best_practices}
+
+Top Failing Audits:
+${top5 || "None"}
+
+Please provide helpful advice based on this context. Keep your answers brief and formatting clean.
+${AUDIT_SUMMARY_PROMPT}
+`;
+      }
+    } catch (err) {
+      console.error("Error setting up chat context/saving:", err);
+    }
+  }
+
   const result = streamText({
     model: geminiFlash,
-    system: AUDIT_SUMMARY_PROMPT,
-    // convertToModelMessages translates UIMessage[] (client format with parts,
-    // tool invocations, etc.) into the ModelMessage[] format the LLM expects.
+    system: systemPrompt,
     messages: await convertToModelMessages(messages),
     tools: {
       fetchMetaTags: tool({
@@ -63,13 +113,22 @@ export async function POST(req: Request) {
     onError: ({ error }) => {
       console.error("streamText error:", error);
     },
+    onFinish: async ({ text }) => {
+      if (scanId && text) {
+        try {
+          const { getSupabaseClient } = await import("@/lib/supabase/client");
+          await (getSupabaseClient() as any).from("chat_messages").insert({
+            scan_id: scanId,
+            role: "assistant",
+            content: text
+          });
+        } catch (err) {
+          console.error("Failed to save assistant message", err);
+        }
+      }
+    }
   });
 
-  // Return the stream as an HTTP response.
-  // toUIMessageStreamResponse() sets the correct headers and encodes the
-  // stream in the protocol that useChat understands (text parts, tool calls,
-  // step boundaries, etc.). This is NOT the same as NextResponse.json() —
-  // JSON requires the full response to be buffered before sending.
   return result.toUIMessageStreamResponse({
     onError: (error) => {
       const errorMessage = error instanceof Error ? error.message : String(error);
