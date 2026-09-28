@@ -10,8 +10,10 @@
  *   - Mobile-safe scrollable score cards (item 8)
  */
 
-import { useState, useRef, type FormEvent } from "react";
-import type { AuditResult } from "@/app/api/audit/route";
+import { useState, useRef, type FormEvent, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import type { AuditResult, AuditSuccess } from "@/app/api/audit/route";
+import type { ScanRow } from "@/lib/supabase/scans";
 
 /* ─── Helpers ─── */
 function isValidUrl(value: string): boolean {
@@ -90,11 +92,29 @@ function ScoreCards({ scores }: { scores: Scores }) {
 }
 
 /* ─── Main component ─── */
-export default function UrlAuditForm() {
-  const [urlValue, setUrlValue] = useState("");
+export default function UrlAuditForm({ initialScan }: { initialScan?: ScanRow }) {
+  const router = useRouter();
+
+  const [urlValue, setUrlValue] = useState(initialScan?.url || "");
   const [urlError, setUrlError] = useState<string | null>(null);
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const [result, setResult] = useState<AuditResult | null>(null);
+  
+  // Initialize from initialScan if present
+  const initResult = initialScan ? {
+    ok: true as const,
+    id: initialScan.id,
+    url: initialScan.url,
+    fetchedAt: initialScan.created_at,
+    scores: {
+      performance: initialScan.score_performance || 0,
+      accessibility: initialScan.score_accessibility || 0,
+      bestPractices: initialScan.score_best_practices || 0,
+      seo: initialScan.score_seo || 0,
+    },
+    raw: initialScan.raw_categories as any,
+  } : null;
+
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">(initialScan ? "success" : "idle");
+  const [result, setResult] = useState<AuditResult | null>(initResult);
   const inputRef = useRef<HTMLInputElement>(null);
 
   /* Validate on blur so we don't yell while the user is still typing */
@@ -116,9 +136,23 @@ export default function UrlAuditForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
       });
-      const data: AuditResult = await res.json();
-      setResult(data);
-      setStatus(data.ok ? "success" : "error");
+      const data = await res.json();
+      
+      if (data.ok) {
+        // Save scanId in localStorage for "Recent scans" list
+        try {
+          const recent = JSON.parse(localStorage.getItem("recentScans") || "[]");
+          const updated = [data.id, ...recent.filter((id: string) => id !== data.id)].slice(0, 10);
+          localStorage.setItem("recentScans", JSON.stringify(updated));
+        } catch (err) {
+          console.error("Failed to save to localStorage", err);
+        }
+        
+        router.push(`/audit/${data.id}`);
+      } else {
+        setResult(data);
+        setStatus("error");
+      }
     } catch {
       setResult({
         ok: false,

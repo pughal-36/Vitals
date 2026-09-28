@@ -4,6 +4,7 @@ import { saveScan } from "@/lib/supabase/scans";
 
 export interface AuditSuccess {
   ok: true;
+  id: string;
   url: string;
   fetchedAt: string;
   scores: {
@@ -62,34 +63,46 @@ export async function POST(req: Request) {
     const categories = data.lighthouseResult?.categories;
     const scores = {
       performance: Math.round((categories?.performance?.score ?? 0) * 100),
-      accessibility: Math.round(
-        (categories?.accessibility?.score ?? 0) * 100
-      ),
-      bestPractices: Math.round(
-        (categories?.["best-practices"]?.score ?? 0) * 100
-      ),
+      accessibility: Math.round((categories?.accessibility?.score ?? 0) * 100),
+      bestPractices: Math.round((categories?.["best-practices"]?.score ?? 0) * 100),
       seo: Math.round((categories?.seo?.score ?? 0) * 100),
     };
 
-    const result: AuditSuccess = {
-      ok: true,
-      url: data.id,
-      fetchedAt: new Date().toISOString(),
-      scores,
-      raw: data.lighthouseResult?.categories,
+    // Extract useful audit info for failing audits
+    const failingAudits = Object.values(data.lighthouseResult?.audits || {})
+      .filter((a: any) => a.score !== null && a.score !== undefined && a.score < 1)
+      .map((a: any) => ({
+        id: a.id,
+        title: a.title,
+        description: a.description,
+        score: a.score,
+        displayValue: a.displayValue
+      }));
+
+    const rawCategoriesPayload = {
+      categories: data.lighthouseResult?.categories || {},
+      failingAudits
     };
 
-    // Persist to Supabase — fire-and-forget.
-    saveScan({
+    // Persist to Supabase
+    const savedScan = await saveScan({
       url: data.id,
       strategy,
       score_performance: scores.performance,
       score_accessibility: scores.accessibility,
       score_best_practices: scores.bestPractices,
       score_seo: scores.seo,
-      raw_categories:
-        (data.lighthouseResult?.categories as Record<string, unknown>) ?? null,
-    }).catch((err) => console.error("[supabase] saveScan failed:", err));
+      raw_categories: rawCategoriesPayload,
+    });
+
+    const result = {
+      ok: true as const,
+      id: savedScan.id,
+      url: data.id,
+      fetchedAt: new Date().toISOString(),
+      scores,
+      raw: rawCategoriesPayload,
+    };
 
     return NextResponse.json(result);
   } catch (err) {

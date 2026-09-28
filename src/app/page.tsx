@@ -1,4 +1,5 @@
 import UrlAuditForm from "@/components/UrlAuditForm";
+import RecentScans from "@/components/RecentScans";
 
 /* ─── Page Component ─── */
 export default function HomePage() {
@@ -23,6 +24,7 @@ export default function HomePage() {
 
         {/* Interactive URL form — client component */}
         <UrlAuditForm />
+        <RecentScans />
       </section>
 
       {/* How Vitals works + AI disclaimer (item 10) */}
