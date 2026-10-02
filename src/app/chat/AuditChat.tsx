@@ -235,12 +235,12 @@ export default function AuditChat() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-theme(spacing.16)-theme(spacing.20))] max-w-3xl mx-auto w-full px-4">
+    <div className="flex flex-col h-[calc(100dvh-theme(spacing.16)-theme(spacing.20))] max-w-3xl mx-auto w-full px-4">
       {/* ─── Messages area ─── */}
       <div
         ref={scrollAreaRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto py-6 space-y-4 scroll-smooth"
+        className="flex-1 overflow-y-auto py-6 space-y-4 scroll-smooth overscroll-y-contain"
       >
         {/* Empty state */}
         {messages.length === 0 && (
@@ -424,7 +424,7 @@ export default function AuditChat() {
           placeholder="Ask about web performance…"
           rows={1}
           disabled={isGenerating}
-          className="flex-1 resize-none rounded-xl bg-surface border border-border px-4 py-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 min-h-[44px] max-h-32"
+          className="flex-1 resize-none rounded-xl bg-surface border border-border px-4 py-3 text-base text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 min-h-[44px] max-h-32"
           style={{
             // Auto-grow textarea up to max-h
             height: "auto",

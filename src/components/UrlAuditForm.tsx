@@ -164,7 +164,7 @@ export default function UrlAuditForm() {
             urlError ? "ring-2 ring-danger/60" : "ring-0"
           }`}
         >
-          <div className="flex-1 flex items-center gap-2 px-4 py-2 text-foreground text-sm">
+          <div className="flex-1 flex items-center gap-2 px-4 py-2 text-foreground text-base">
             <svg
               className="w-4 h-4 shrink-0 text-muted"
               fill="none"
