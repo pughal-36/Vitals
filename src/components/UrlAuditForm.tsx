@@ -290,9 +290,23 @@ export default function UrlAuditForm() {
           </div>
           <div>
             <p className="text-base font-medium text-foreground">No audit yet</p>
-            <p className="text-sm mt-1 max-w-xs">
+            <p className="text-sm mt-1 mb-4 max-w-xs mx-auto">
               Paste any URL above and click <strong>Scan</strong> to get a PageSpeed score, SEO report, and AI-powered recommendations.
             </p>
+            <button 
+              type="button" 
+              onClick={() => {
+                setUrlValue("https://vercel.com");
+                if (urlError) setUrlError(null);
+                setTimeout(() => inputRef.current?.focus(), 0);
+              }}
+              className="text-sm text-primary hover:text-primary-light font-medium inline-flex items-center gap-1.5 transition-colors"
+            >
+              Try an example: https://vercel.com
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </button>
           </div>
         </div>
       )}
@@ -316,16 +330,28 @@ export default function UrlAuditForm() {
             </svg>
             <div className="flex-1">
               <p className="text-danger font-semibold text-sm mb-1">Audit failed</p>
-              <p className="text-sm text-muted mb-3">{result.error}</p>
-              <button
-                onClick={handleRetry}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-danger/20 hover:bg-danger/30 text-danger text-sm font-semibold transition-colors duration-200"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Try again
-              </button>
+              <p className="text-sm text-danger/80 mb-3 leading-relaxed">{result.error}</p>
+              {result.error.includes("Invalid URL") || result.error.includes("http") ? (
+                <button
+                  onClick={() => {
+                    inputRef.current?.focus();
+                    inputRef.current?.select();
+                  }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-danger/20 hover:bg-danger/30 text-danger text-sm font-semibold transition-colors duration-200"
+                >
+                  Check URL spelling
+                </button>
+              ) : (
+                <button
+                  onClick={handleRetry}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-danger/20 hover:bg-danger/30 text-danger text-sm font-semibold transition-colors duration-200"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Try again
+                </button>
+              )}
             </div>
           </div>
         </div>
