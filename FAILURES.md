@@ -1,0 +1,17 @@
+# Failure Scenarios Inventory
+
+| # | Scenario | Where it happens (file) | Current behavior | Desired behavior | Status |
+|---|---|---|---|---|---|
+| 1 | offline before send | `src/app/chat/AuditChat.tsx` | `useChat` fails, `status` becomes `"error"`. UI shows a generic "Connection dropped" alert without a retry button. | Distinct copy for offline vs generic vs 429. Show inline "Retry this message" button using `reload`. | Todo |
+| 2 | connection dropped mid-stream | `src/app/chat/AuditChat.tsx` | `useChat` sets `status` to `"error"`. UI shows the same generic "Connection dropped" alert. | Partial text kept visible and marked incomplete. Distinct copy with inline retry button for the failed message. | Todo |
+| 3 | model API error mid-stream | `src/app/api/chat/route.ts` & `AuditChat.tsx` | `onError` returns masked string `"An error occurred..."` which is rendered as part of the assistant's text. `status` might not trigger `"error"` UI if masking succeeds as a normal text chunk. | Safely masked error. In UI, proper error state and inline retry button if it terminates abnormally. | Todo |
+| 4 | 429 rate limit (Gemini and PageSpeed) | `src/app/api/chat/route.ts` & `src/app/api/audit/route.ts` | Chat route catches and returns 429 JSON. Audit route returns 502 with error message from PageSpeed API. Chat UI shows generic "Connection dropped". | Proper 429 JSON response. Distinct 429 UI in both Chat and Audit with retry capabilities. | Todo |
+| 5 | empty input | `src/app/chat/AuditChat.tsx` & `src/app/api/chat/route.ts` | Client button disabled. Server validates and returns 400 `{error: "Message cannot be empty", code: "invalid_input"}`. | Server-side rejection with 400 JSON. Client-side handling/disable. | Server Done, UI Todo |
+| 6 | whitespace-only input | `src/app/chat/AuditChat.tsx` & `src/app/api/chat/route.ts` | Same as empty input. Client trims and disables button. Server returns 400. | Same as empty input. | Server Done, UI Todo |
+| 7 | invalid/unreachable audit URL | `src/app/api/audit/route.ts` | Returns 400 with `{error: "Invalid URL."}`. | Empty state indicating what went wrong and next steps. No dead-end copy. | Todo |
+| 8 | audit returns no results | `src/app/api/audit/route.ts` | Returns 0 scores if categories are missing. | Empty state explaining what went wrong and what to try next. | Todo |
+| 9 | first-run with no audits/no conversations | `src/app/chat/AuditChat.tsx` | Shows "Audit Assistant" heading and description, but no clickable examples or URL input. | Heading, 1-line explanation, URL input, 1 clickable example URL, 3 clickable suggested questions. | Todo |
+| 10 | slow PageSpeed response | Audit UI | Not checked yet, but likely un-skeletonized loading state. | Skeleton matching exact layout dimensions so nothing shifts on arrival. | Todo |
+| 11 | slow first token | `src/app/chat/AuditChat.tsx` | Shows "Thinking..." bouncing dots UI. | Skeleton for chat pending state matching real content layout dimensions exactly. | Todo |
+| 12 | malformed JSON from a tool result | `src/app/api/chat/route.ts` & `AuditChat.tsx` | UI handles `output-error` state and shows "Error fetching meta tags" red box. | Graceful error state, no raw leakage, clear UX. | Todo |
+| 13 | double-clicking send/retry | `src/app/chat/AuditChat.tsx` | Send button is disabled while `isGenerating` is true. Race conditions might allow double-clicks before state updates. | Explicitly disabled while status is submitted/streaming to prevent double-firing. | Todo |
