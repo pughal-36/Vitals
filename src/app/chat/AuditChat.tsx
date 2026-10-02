@@ -245,15 +245,33 @@ export default function AuditChat() {
         {/* Empty state */}
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
               <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
               </svg>
             </div>
             <h2 className="text-xl font-semibold text-foreground">Audit Assistant</h2>
-            <p className="text-muted text-sm max-w-sm">
+            <p className="text-muted text-sm max-w-sm mb-6">
               Ask about web performance, Core Web Vitals, or paste your PageSpeed audit data for an AI-powered summary.
             </p>
+            <div className="flex flex-col gap-2 w-full max-w-md">
+              {[
+                "What's causing my low LCP score?",
+                "How can I improve accessibility?",
+                "Summarize these audit results for me."
+              ].map((q) => (
+                <button
+                  key={q}
+                  onClick={() => {
+                    setInput(q);
+                    inputRef.current?.focus();
+                  }}
+                  className="text-sm text-left px-4 py-3 rounded-xl bg-surface border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors text-foreground"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -315,20 +333,13 @@ export default function AuditChat() {
           );
         })}
 
-        {/* ─── Thinking indicator ───
-            Shows when status is "submitted" (request sent, waiting for first token).
-            When status moves to "streaming", the assistant message appears in messages[]
-            automatically, so this indicator disappears naturally — no flicker because
-            the indicator and the first token are never both visible at the same time. */}
+        {/* ─── Thinking indicator ─── */}
         {status === "submitted" && (
           <div className="flex justify-start">
-            <div className="bg-surface border border-border rounded-2xl rounded-bl-md px-4 py-3 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="flex gap-1">
-                <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce [animation-delay:0ms]" />
-                <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce [animation-delay:150ms]" />
-                <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce [animation-delay:300ms]" />
-              </div>
-              <span className="text-xs text-muted">Thinking…</span>
+            <div className="w-full max-w-[85%] sm:max-w-[75%] rounded-2xl rounded-bl-md px-4 py-3 bg-surface border border-border flex flex-col gap-2 animate-pulse">
+              <div className="h-4 bg-muted/20 rounded w-3/4"></div>
+              <div className="h-4 bg-muted/20 rounded w-full"></div>
+              <div className="h-4 bg-muted/20 rounded w-5/6"></div>
             </div>
           </div>
         )}
