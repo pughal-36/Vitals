@@ -20,6 +20,21 @@ import { AUDIT_SUMMARY_PROMPT } from "@/lib/gemini/prompts";
 
 export async function POST(req: Request) {
   try {
+    const sabotageHeader = req.headers.get("x-sabotage");
+    const isSabotageEnabled = process.env.ENABLE_SABOTAGE === "true";
+
+    if (isSabotageEnabled && sabotageHeader) {
+      if (sabotageHeader === "429") {
+        return Response.json({ error: "Sabotage Rate Limit", code: "rate_limit" }, { status: 429 });
+      }
+      if (sabotageHeader === "500") {
+        return Response.json({ error: "Sabotage Server Error", code: "upstream_model_error" }, { status: 500 });
+      }
+      if (sabotageHeader === "slow") {
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+    }
+
     const body = await req.json();
     const messages: UIMessage[] = body.messages;
 
@@ -47,10 +62,16 @@ export async function POST(req: Request) {
       }
     }
 
+    const abortController = new AbortController();
+    if (isSabotageEnabled && sabotageHeader === "midstream") {
+      setTimeout(() => abortController.abort(), 1500); // Abort mid-stream
+    }
+
     // streamText returns synchronously — the streaming is lazy.
     const result = streamText({
       model: geminiFlash,
       system: AUDIT_SUMMARY_PROMPT,
+      abortSignal: abortController.signal,
       // convertToModelMessages translates UIMessage[] (client format with parts,
       // tool invocations, etc.) into the ModelMessage[] format the LLM expects.
       messages: await convertToModelMessages(messages),
@@ -61,6 +82,12 @@ export async function POST(req: Request) {
             url: z.string().url("Must be a valid URL"),
           }),
           execute: async ({ url }) => {
+            if (isSabotageEnabled && sabotageHeader === "malformed") {
+              const obj: any = {};
+              obj.self = obj; // Circular reference to break JSON serialization
+              return obj;
+            }
+
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
 
