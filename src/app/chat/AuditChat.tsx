@@ -149,7 +149,9 @@ export default function AuditChat({
   initialMessages?: UIMessage[]; 
   initialChips?: string[] 
 }) {
-  const { messages, sendMessage, stop, status, setMessages } = useChat();
+  // ─── useChat hook ───
+  // By default it POSTs to /api/chat, which is exactly where our route handler lives.
+  const { messages, sendMessage, stop, status, setMessages, error, regenerate, clearError } = useChat();
 
   const [input, setInput] = useState("");
   const [chips, setChips] = useState<string[]>(initialChips);
@@ -195,6 +197,30 @@ export default function AuditChat({
 
   // Derived state: is the AI currently working?
   const isGenerating = status === "submitted" || status === "streaming";
+
+  // ─── Error handling logic ───
+  let errorType = "generic";
+  let errorHeadline = "Something went wrong";
+  let errorCopy = "We ran into an issue connecting to the AI. Please try again.";
+
+  if (error) {
+    const msg = error.message || "";
+    if (msg.includes("Failed to fetch") || !navigator.onLine) {
+      errorType = "offline";
+      errorHeadline = "You appear to be offline";
+      errorCopy = "Check your internet connection and try sending your message again.";
+    } else if (msg.includes("429") || msg.includes("Rate limit") || msg.includes("rate_limit")) {
+      errorType = "429";
+      errorHeadline = "Rate limit reached";
+      errorCopy = "We're receiving too many requests right now. Please wait a moment and try again.";
+    }
+  }
+
+  const handleRetry = () => {
+    if (isGenerating) return;
+    clearError();
+    regenerate();
+  };
 
   // ─── Auto-scroll logic ───
   // Only scroll to bottom if the user hasn't scrolled up manually.
@@ -249,25 +275,43 @@ export default function AuditChat({
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-theme(spacing.16)-theme(spacing.20))] max-w-3xl mx-auto w-full px-4">
+    <div className="flex flex-col h-[calc(100dvh-theme(spacing.16)-theme(spacing.20))] max-w-3xl mx-auto w-full px-4">
       {/* ─── Messages area ─── */}
       <div
         ref={scrollAreaRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto py-6 space-y-4 scroll-smooth"
+        className="flex-1 overflow-y-auto py-6 space-y-4 scroll-smooth overscroll-y-contain"
       >
         {/* Empty state */}
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-2">
               <svg className="w-7 h-7 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
               </svg>
             </div>
             <h2 className="text-xl font-semibold text-foreground">Audit Assistant</h2>
-            <p className="text-muted text-sm max-w-sm">
+            <p className="text-muted text-sm max-w-sm mb-6">
               Ask about web performance, Core Web Vitals, or paste your PageSpeed audit data for an AI-powered summary.
             </p>
+            <div className="flex flex-col gap-2 w-full max-w-md">
+              {[
+                "What's causing my low LCP score?",
+                "How can I improve accessibility?",
+                "Summarize these audit results for me."
+              ].map((q) => (
+                <button
+                  key={q}
+                  onClick={() => {
+                    setInput(q);
+                    inputRef.current?.focus();
+                  }}
+                  className="text-sm text-left px-4 py-3 rounded-xl bg-surface border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors text-foreground"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -276,6 +320,7 @@ export default function AuditChat({
           const isLastAssistant =
             message.role === "assistant" && idx === messages.length - 1;
           const isStreaming = status === "streaming" && isLastAssistant;
+          const isIncomplete = status === "error" && isLastAssistant;
           return (
             <div
               key={message.id}
@@ -311,6 +356,14 @@ export default function AuditChat({
                       }
                       return null;
                     })}
+                    {isIncomplete && (
+                      <div className="mt-3 text-xs font-medium text-muted/80 flex items-center gap-1.5 border-t border-border/50 pt-2">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        Response incomplete
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <p className="whitespace-pre-wrap">{getMessageText(message).replace(/<chips>[\s\S]*?<\/chips>/g, "")}</p>
@@ -323,28 +376,51 @@ export default function AuditChat({
         {/* ─── Thinking indicator ─── */}
         {status === "submitted" && (
           <div className="flex justify-start">
-            <div className="bg-surface border border-border rounded-2xl rounded-bl-md px-4 py-3 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="flex gap-1">
-                <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce [animation-delay:0ms]" />
-                <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce [animation-delay:150ms]" />
-                <span className="w-2 h-2 rounded-full bg-primary/60 animate-bounce [animation-delay:300ms]" />
-              </div>
-              <span className="text-xs text-muted">Thinking…</span>
+            <div className="w-full max-w-[85%] sm:max-w-[75%] rounded-2xl rounded-bl-md px-4 py-3 bg-surface border border-border flex flex-col gap-2 animate-pulse">
+              <div className="h-4 bg-muted/20 rounded w-3/4"></div>
+              <div className="h-4 bg-muted/20 rounded w-full"></div>
+              <div className="h-4 bg-muted/20 rounded w-5/6"></div>
             </div>
           </div>
         )}
 
-        {/* 5. Error state — shown when the stream drops mid-response */}
+        {/* 5. Error state — shown when the stream drops mid-response or setup fails */}
         {status === "error" && (
-          <div
-            role="alert"
-            className="flex justify-start"
-          >
-            <div className="max-w-[85%] sm:max-w-[75%] rounded-2xl rounded-bl-md px-4 py-3 bg-danger/10 border border-danger/30 text-sm">
-              <p className="text-danger font-semibold mb-1">Connection dropped</p>
-              <p className="text-muted text-xs">
-                The response stream was interrupted. Your previous messages are still here — try sending your question again.
-              </p>
+          <div role="alert" className="flex justify-start animate-in fade-in slide-in-from-bottom-2 duration-500 ease-out">
+            <div className="max-w-[85%] sm:max-w-[75%] rounded-2xl p-5 bg-surface border border-border shadow-sm text-sm">
+              <div className="flex items-start gap-3">
+                <div className="shrink-0 p-2 bg-primary/10 text-primary rounded-full mt-0.5">
+                  {errorType === 'offline' ? (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  ) : errorType === '429' ? (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  )}
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground text-base mb-1">{errorHeadline}</p>
+                  <p className="text-muted text-sm mb-4 leading-relaxed">
+                    {errorCopy}
+                  </p>
+                  <button
+                    onClick={handleRetry}
+                    disabled={isGenerating}
+                    className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-light text-white text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Retry this message
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -403,7 +479,7 @@ export default function AuditChat({
           placeholder="Ask about web performance…"
           rows={1}
           disabled={isGenerating}
-          className="flex-1 resize-none rounded-xl bg-surface border border-border px-4 py-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 min-h-[44px] max-h-32"
+          className="flex-1 resize-none rounded-xl bg-surface border border-border px-4 py-3 text-base text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 min-h-[44px] max-h-32"
           style={{
             // Auto-grow textarea up to max-h
             height: "auto",
