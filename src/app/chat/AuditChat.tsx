@@ -27,7 +27,7 @@ import remarkGfm from "remark-gfm";
 // ─── Tool Part UI Component ───
 // AI SDK v7 generates typed tool parts: { type: "tool-fetchMetaTags", state, input, output, errorText, toolCallId }
 // States: input-streaming → input-available → output-available | output-error
-function FetchMetaTagsUI({ part }: { part: any }) {
+export function FetchMetaTagsUI({ part }: { part: any }) {
   const url = part.input?.url || "url";
 
   // input-streaming: model is still generating the tool input args
