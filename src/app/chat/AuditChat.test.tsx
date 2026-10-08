@@ -75,6 +75,7 @@ describe('AuditChat Component', () => {
             type: 'tool-fetchMetaTags',
             state: 'output-available',
             toolCallId: 'call-1',
+            input: { url: 'https://example.com' },
             output: {
               title: 'Example Homepage',
               description: 'Fast modern web vitals audit',

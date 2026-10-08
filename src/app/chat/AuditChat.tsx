@@ -24,23 +24,8 @@ import { useState, useRef, useEffect, useCallback, type FormEvent } from "react"
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-export type FetchMetaTagsPart = {
-  type?: string;
-  state?: 'input-streaming' | 'input-available' | 'output-available' | 'output-error';
-  input?: { url?: string };
-  output?: {
-    title?: string | null;
-    description?: string | null;
-    ogTitle?: string | null;
-    ogDescription?: string | null;
-    ogImage?: string | null;
-    canonicalUrl?: string | null;
-  };
-  errorText?: string;
-  toolCallId?: string;
-};
-
-export function FetchMetaTagsUI({ part }: { part: FetchMetaTagsPart }) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function FetchMetaTagsUI({ part }: { part: any }) {
   const url = part.input?.url || "url";
 
   // input-streaming: model is still generating the tool input args

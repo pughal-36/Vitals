@@ -189,20 +189,20 @@ ${AUDIT_SUMMARY_PROMPT}
   } catch (error: unknown) {
     console.error("Chat route handler error:", error);
 
-    const err = error as { statusCode?: number; name?: string };
-    const statusCode = typeof err?.statusCode === "number" ? err.statusCode : undefined;
+    const err = (error && typeof error === "object" ? error : {}) as { statusCode?: number; name?: string };
+    const statusCode = typeof err.statusCode === "number" ? err.statusCode : undefined;
 
-    if (statusCode === 429 || err?.name === "RateLimitError") {
+    if (statusCode === 429 || err.name === "RateLimitError") {
       return Response.json(
         { error: "Rate limit exceeded. Please try again later.", code: "rate_limit" },
         { status: 429 }
       );
     }
 
-    if (statusCode === 500 || statusCode === 502 || error?.name === "APICallError") {
+    if (statusCode === 500 || statusCode === 502 || err.name === "APICallError") {
       return Response.json(
         { error: "The AI provider encountered an error. Please try again.", code: "upstream_model_error" },
-        { status: statusCode >= 500 ? statusCode : 502 }
+        { status: statusCode && statusCode >= 500 ? statusCode : 502 }
       );
     }
 
