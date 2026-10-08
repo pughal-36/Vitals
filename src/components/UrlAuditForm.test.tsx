@@ -69,7 +69,7 @@ describe('UrlAuditForm', () => {
     await user.click(submitBtn);
 
     await waitFor(() => {
-      expect(pushMock).toHaveBeenCalledWith('/audit/scan-123');
+      expect(pushMock).toHaveBeenCalledWith('/?scan=scan-123');
     });
   });
 });

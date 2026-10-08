@@ -1,52 +1,46 @@
-import UrlAuditForm from "@/components/UrlAuditForm";
+import Link from "next/link";
+import GlobeExperience from "@/components/GlobeExperience";
 import RecentScans from "@/components/RecentScans";
+import RememberScan from "@/components/RememberScan";
+import UrlAuditForm from "@/components/UrlAuditForm";
+import { getScanById } from "@/lib/supabase/scans";
 
-/* ─── Page Component ─── */
-export default function HomePage() {
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ scan?: string }> }) {
+  const { scan: scanId } = await searchParams;
+  const scan = scanId ? await getScanById(scanId) : null;
+  const composite = scan ? Math.round(((scan.score_performance || 0) + (scan.score_seo || 0) + (scan.score_accessibility || 0) + (scan.score_best_practices || 0)) / 4) : undefined;
+
   return (
-    <main className="vitals-home flex-1 flex flex-col items-center px-4 py-12 sm:py-20 gap-16">
-      {/* Hero Section */}
-      <section className="max-w-3xl w-full text-center" id="hero">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass text-xs font-medium text-muted mb-6">
-          <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-          Powered by Google PageSpeed Insights &amp; Gemini
+    <main className="vitals-home flex-1">
+      {scan && <RememberScan scanId={scan.id} />}
+      <section className="vitals-hero mx-auto grid w-full max-w-6xl items-center gap-8 px-4 py-10 sm:px-6 sm:py-14 lg:grid-cols-[1.02fr_.98fr] lg:gap-12" id="hero">
+        <div className="hero-copy">
+          <div className="inline-flex items-center gap-2 border border-border bg-surface px-3 py-2 text-[10px] font-mono tracking-[.12em] text-muted mb-6">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+            GOOGLE PAGESPEED + GEMINI FLASH
+          </div>
+          <h1 className="max-w-xl text-4xl font-semibold leading-[1.05] tracking-[-.06em] text-foreground sm:text-5xl lg:text-[3.5rem]">
+            Audit your site with Vitals. See where you stand out.
+          </h1>
+          <p className="mt-5 max-w-lg text-base leading-7 text-muted sm:text-lg">A measured first look at your speed, search signals, accessibility, and the next improvements worth making.</p>
+          <div className="mt-7"><UrlAuditForm initialScan={scan ?? undefined} /></div>
+          {scan && composite !== undefined && <div className="mt-5 flex flex-wrap items-center gap-3 text-xs font-mono text-muted">
+            <span className="text-[#B87E2F]">LAST AUDIT / {scan.url.replace(/^https?:\/\//, "")}</span>
+            <span className="tabular-nums">COMPOSITE {composite}/100</span>
+            <Link href={`/readout/${scan.id}?scan=${scan.id}`} className="text-foreground underline underline-offset-4">Open readout</Link>
+          </div>}
+          <div className="mt-6"><RecentScans /></div>
         </div>
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground mb-4 leading-[1.1]">
-          Audit your site&rsquo;s{" "}
-          <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Web Vitals
-          </span>
-        </h1>
-        <p className="text-lg sm:text-xl text-muted max-w-xl mx-auto mb-8">
-          Enter any URL to get a real-time PageSpeed score, SEO audit, and
-          AI‑powered optimisation summary — all in one place.
-        </p>
-
-        {/* Interactive URL form — client component */}
-        <UrlAuditForm />
-        <RecentScans />
+        <div className="min-w-0"><GlobeExperience scanId={scan?.id} score={composite} /></div>
       </section>
 
-      {/* How Vitals works + AI disclaimer (item 10) */}
-      <section
-        className="max-w-2xl w-full text-center border-t border-border/40 pt-10"
-        id="how-it-works"
-        aria-label="How Vitals works"
-      >
-        <h2 className="text-base font-semibold text-foreground mb-2">How Vitals works</h2>
-        <p className="text-sm text-muted mb-3">
-          Vitals sends your URL to the{" "}
-          <span className="text-foreground font-medium">Google PageSpeed Insights API</span>{" "}
-          to run a real Lighthouse audit, then surfaces the scores here.
-          Head to the{" "}
-          <a href="/chat" className="text-primary underline-offset-4 hover:underline">
-            Chat tab
-          </a>{" "}
-          to ask Gemini Flash for tailored optimisation advice based on the results.
-        </p>
-        <p className="text-xs text-muted/70 italic">
-          ⚠ AI-generated insights are produced by Gemini and may be inaccurate — always verify recommendations before applying them in production.
-        </p>
+      <section className="mx-auto grid w-full max-w-6xl gap-5 border-t border-border px-4 py-9 sm:px-6 md:grid-cols-3" aria-label="Vitals audit workflow">
+        <article className="workflow-step"><span>01 / AUDIT</span><h2>Measure the live page.</h2><p>Run a Lighthouse-backed scan with Google PageSpeed Insights.</p></article>
+        <article className="workflow-step"><span>02 / READOUT</span><h2>Find the useful signals.</h2><p>See the scores and key findings stored with your scan.</p></article>
+        <article className="workflow-step"><span>03 / ASSISTANT</span><h2>Turn findings into next steps.</h2><p>Ask Gemini Flash about this audit, with the saved scan as context.</p></article>
+      </section>
+      <section className="mx-auto w-full max-w-6xl px-4 pb-12 sm:px-6" aria-label="How Vitals works">
+        <p className="text-xs leading-6 text-muted">Vitals sends your URL to Google PageSpeed Insights for a real Lighthouse audit, saves the scan in Supabase, and uses Gemini Flash to help explain the results. AI-generated advice can be inaccurate; verify recommendations before applying them in production.</p>
       </section>
     </main>
   );

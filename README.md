@@ -80,3 +80,32 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## FE-09 — Interactive Earth, saved readouts, and audit tips
+
+- Replaced the landing hero with **“Audit your site with Vitals. See where you stand out.”**, the existing URL audit form, and a lazy-loaded React Three Fiber globe. The globe uses the exact [Earth model by Zoe XR on Poly Pizza](https://poly.pizza/m/3U-XAIY031u), licensed [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/); its attribution is in the site footer. The asset has two separate color materials and no textures; code recolors ocean to graphite-soft and land to steel-highlight.
+- The completed-audit state adds the site's amber pin, short rings/beam, dim comparison sites, eased orientation, and score label. Dragging tilts/rotates with a brief damped release inertia before the slow idle spin resumes; scrolling adjusts zoom/rotation. Reduced-motion, WebGL-unavailable, and low-power/save-data contexts use a static steel-and-graphite illustration.
+- The canvas and model are loaded only as the hero approaches the viewport, with DPR capped at 1.5, render-loop pausing offscreen/in hidden tabs, soft lights, and cloned-material cleanup. Model compression uses Meshopt with `gltf-transform` (no texture compression or geometry simplification).
+- Audit IDs are stored in the URL as `?scan=<id>` and mirrored to localStorage. Readout and Assistant restore their scan (and Assistant chat history) from Supabase, provide no-scan/invalid-scan empty states, and link between the three flows. Assistant opens with the saved audit context and suggested questions.
+- While an audit is running, `/api/tips` requests a varied batch from Gemini Flash using the existing server-side Gemini key. The client deduplicates tips for the browser session, prefetches before the batch ends, and uses a small static pool only when the API fails or is slow. Tip transitions are brief and disabled for reduced-motion preferences.
+
+### Performance note — one local production check
+
+- **Lighthouse (desktop, local production build): 100/100 performance**, FCP **0.2 s**, LCP **0.6 s**, TBT **70 ms**, CLS **0**. Reported total transfer was **507 KiB**; the run observed 11 script requests totaling **418,190 bytes** transferred. The hero was in/near the first viewport, so the deferred R3F chunk was eligible to load during this run; the canvas remains a separate lazy chunk and the form is usable independently.
+- **Mobile viewport simulation (390 × 844):** no horizontal overflow, WebGL canvas loaded, no page errors, and **60 fps** over a 2.5-second `requestAnimationFrame` sample using headless Chromium/SwiftShader. This is a software-rendered viewport check, not a claim about every physical phone/GPU.
+- **Earth model:** **71,164 B → 17,260 B** (**75.7% smaller**, about 69.5 KiB → 16.9 KiB) with Meshopt; 1,952 vertices, 960 triangles, two independent materials, no texture. No heavy postprocessing or permanent amber glow is used.
+
+### Configuration
+
+Set these values in `.env.local` for local development and in **Vercel → Project Settings → Environment Variables** for Preview/Production. Do not commit secrets:
+
+- `VITALS_GEMINI_API_KEY` — server-only Gemini key used by chat and `/api/tips`.
+- `VITALS_PAGESPEED_API_KEY` — server-only Google PageSpeed Insights key.
+- `NEXT_PUBLIC_VITALS_SUPABASE_URL` — Supabase project URL.
+- `VITALS_SUPABASE_ANON_KEY` — Supabase anon key (the existing client also accepts `NEXT_PUBLIC_VITALS_SUPABASE_ANON_KEY` as a fallback; use the same anon key). The anon key is subject to the project's Supabase RLS policies.
+
+No `.env.local` file or credentials were present in the checked-out workspace; set the existing project's values in those locations. The tips route uses `VITALS_GEMINI_API_KEY`; it does not expose the key to the browser.
+
+### With more time
+
+I would add device-level profiling across actual mobile GPUs, an accessible keyboard alternative for globe pin inspection, and integration tests using a seeded Supabase scan/chat fixture. Optional calibration tick marks were omitted because the referenced `DESIGN.md` was not present in the repository; the explicit globe design rules supplied in the task were followed without adding colors or a theme switch.

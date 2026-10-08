@@ -12,16 +12,21 @@ export type ChatMessageRow = {
 const table = () => (getSupabaseClient() as any).from("chat_messages");
 
 export async function getChatHistory(scanId: string): Promise<ChatMessageRow[]> {
-  const { data, error } = await table()
-    .select("*")
-    .eq("scan_id", scanId)
-    .order("created_at", { ascending: true });
+  try {
+    const { data, error } = await table()
+      .select("*")
+      .eq("scan_id", scanId)
+      .order("created_at", { ascending: true });
   
-  if (error) {
+    if (error) {
+      console.error("Failed to fetch chat history", error);
+      return [];
+    }
+    return (data ?? []) as ChatMessageRow[];
+  } catch (error) {
     console.error("Failed to fetch chat history", error);
     return [];
   }
-  return data as ChatMessageRow[];
 }
 
 export async function saveChatMessage(message: Omit<ChatMessageRow, "id" | "created_at">) {

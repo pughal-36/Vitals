@@ -49,15 +49,16 @@ test.describe('Primary Vitals Audit and Assistant Flow', () => {
 
     // 1. Visit the home page
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /audit your site.*web vitals/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /audit your site with vitals\. see where you stand out\./i })).toBeVisible();
+    await expect(page.locator('.globe-panel')).toBeVisible();
 
     // 2. Submit URL for audit in the form
     const urlInput = page.getByRole('textbox', { name: /website url to audit/i });
     await urlInput.fill('https://example.com');
     await page.getByRole('button', { name: /scan/i }).click();
 
-    // 3. Wait for client-side navigation to the audit page (allow time for initial dev compilation)
-    await expect(page).toHaveURL(/\/audit\/353b87a5-9081-4dfa-acd8-042d1873837b/, { timeout: 20000 });
+    // 3. Wait for the scan ID to be mirrored to the landing URL
+    await expect(page).toHaveURL(/\?scan=353b87a5-9081-4dfa-acd8-042d1873837b/, { timeout: 20000 });
 
     // 4. Navigate to the Assistant chat tab
     const assistantLink = page.getByRole('link', { name: 'ASSISTANT' });

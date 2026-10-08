@@ -7,7 +7,7 @@ export default function Navigation() {
   const match = pathname.match(/^\/(audit|readout|assistant)\/([^\/]+)/);
   const scanId = match ? match[2] : null;
 
-  const getHref = (base: string) => (scanId ? `/${base}/${scanId}` : (base === "audit" ? "/" : `/${base}`));
+  const getHref = (base: string) => (scanId ? (base === "audit" ? `/?scan=${encodeURIComponent(scanId)}` : `/${base}/${encodeURIComponent(scanId)}?scan=${encodeURIComponent(scanId)}`) : (base === "audit" ? "/" : `/${base}`));
   
   const navLinks = [
     { href: getHref("audit"), label: "AUDIT" },
