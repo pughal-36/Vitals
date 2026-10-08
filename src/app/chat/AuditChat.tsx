@@ -24,10 +24,23 @@ import { useState, useRef, useEffect, useCallback, type FormEvent } from "react"
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-// ─── Tool Part UI Component ───
-// AI SDK v7 generates typed tool parts: { type: "tool-fetchMetaTags", state, input, output, errorText, toolCallId }
-// States: input-streaming → input-available → output-available | output-error
-export function FetchMetaTagsUI({ part }: { part: any }) {
+export type FetchMetaTagsPart = {
+  type?: string;
+  state?: 'input-streaming' | 'input-available' | 'output-available' | 'output-error';
+  input?: { url?: string };
+  output?: {
+    title?: string | null;
+    description?: string | null;
+    ogTitle?: string | null;
+    ogDescription?: string | null;
+    ogImage?: string | null;
+    canonicalUrl?: string | null;
+  };
+  errorText?: string;
+  toolCallId?: string;
+};
+
+export function FetchMetaTagsUI({ part }: { part: FetchMetaTagsPart }) {
   const url = part.input?.url || "url";
 
   // input-streaming: model is still generating the tool input args

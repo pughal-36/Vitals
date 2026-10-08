@@ -68,15 +68,17 @@ export async function POST(req: Request) {
       seo: Math.round((categories?.seo?.score ?? 0) * 100),
     };
 
-    // Extract useful audit info for failing audits
+    type AuditEntry = { id?: string; title?: string; description?: string; score?: number | null; displayValue?: string | null };
     const failingAudits = Object.values(data.lighthouseResult?.audits || {})
-      .filter((a: any) => a.score !== null && a.score !== undefined && a.score < 1)
-      .map((a: any) => ({
+      .filter((a): a is AuditEntry & { id: string; title: string; score: number } =>
+        Boolean(a && a.id && a.title && a.score !== null && a.score !== undefined && a.score < 1)
+      )
+      .map((a) => ({
         id: a.id,
         title: a.title,
-        description: a.description,
+        description: a.description || "",
         score: a.score,
-        displayValue: a.displayValue
+        displayValue: a.displayValue || null,
       }));
 
     const rawCategoriesPayload = {

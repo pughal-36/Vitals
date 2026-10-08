@@ -1,11 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { UIMessage } from 'ai';
 import AuditChat from './AuditChat';
 
 // Mock state for useChat
 let mockChatState = {
-  messages: [] as any[],
+  messages: [] as UIMessage[],
   sendMessage: vi.fn(),
   stop: vi.fn(),
   status: 'ready' as 'ready' | 'submitted' | 'streaming' | 'error',

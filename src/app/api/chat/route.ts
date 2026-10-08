@@ -69,8 +69,8 @@ export async function POST(req: Request) {
 
     const getMessageText = (message: UIMessage): string => {
       return message.parts
-        ? message.parts.filter((part: any) => part.type === "text").map((part: any) => part.text).join("")
-        : (message as any).text || (message as any).content || "";
+        ? message.parts.filter((part): part is { type: "text"; text: string } => part.type === "text").map((part) => part.text).join("")
+        : (message as unknown as { text?: string; content?: string }).text || (message as unknown as { text?: string; content?: string }).content || "";
     };
 
     let systemPrompt = AUDIT_SUMMARY_PROMPT;
@@ -79,8 +79,8 @@ export async function POST(req: Request) {
       try {
         // Save user message to Supabase
         if (lastMessage && lastMessage.role === "user") {
-          const { getSupabaseClient } = await import("@/lib/supabase/client");
-          await (getSupabaseClient() as any).from("chat_messages").insert({
+          const { saveChatMessage } = await import("@/lib/supabase/chat");
+          await saveChatMessage({
             scan_id: scanId,
             role: "user",
             content: getMessageText(lastMessage)
@@ -91,8 +91,8 @@ export async function POST(req: Request) {
         const { getScanById } = await import("@/lib/supabase/scans");
         const scan = await getScanById(scanId);
         if (scan) {
-          const failingAudits = (scan.raw_categories as any)?.failingAudits || [];
-          const top5 = failingAudits.slice(0, 5).map((a: any) => `- ${a.title}: ${a.description} (Score: ${a.score})`).join("\n");
+          const failingAudits = (scan.raw_categories as { failingAudits?: Array<{ title: string; description?: string; score?: number }> } | null)?.failingAudits || [];
+          const top5 = failingAudits.slice(0, 5).map((a) => `- ${a.title}: ${a.description || ""} (Score: ${a.score ?? "-"})`).join("\n");
           systemPrompt = `
 You are an expert SEO and Web Performance assistant.
 The user is asking about their website: ${scan.url}
@@ -133,7 +133,7 @@ ${AUDIT_SUMMARY_PROMPT}
           }),
           execute: async ({ url }) => {
             if (isSabotageEnabled && sabotageHeader === "malformed") {
-              const obj: any = {};
+              const obj: Record<string, unknown> = {};
               obj.self = obj;
               return obj;
             }
@@ -165,8 +165,8 @@ ${AUDIT_SUMMARY_PROMPT}
       onFinish: async ({ text }) => {
         if (scanId && text) {
           try {
-            const { getSupabaseClient } = await import("@/lib/supabase/client");
-            await (getSupabaseClient() as any).from("chat_messages").insert({
+            const { saveChatMessage } = await import("@/lib/supabase/chat");
+            await saveChatMessage({
               scan_id: scanId,
               role: "assistant",
               content: text
@@ -186,12 +186,13 @@ ${AUDIT_SUMMARY_PROMPT}
         return "An error occurred while generating the response. Please try again.";
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Chat route handler error:", error);
 
-    const statusCode = typeof error?.statusCode === "number" ? error.statusCode : undefined;
+    const err = error as { statusCode?: number; name?: string };
+    const statusCode = typeof err?.statusCode === "number" ? err.statusCode : undefined;
 
-    if (statusCode === 429 || error?.name === "RateLimitError") {
+    if (statusCode === 429 || err?.name === "RateLimitError") {
       return Response.json(
         { error: "Rate limit exceeded. Please try again later.", code: "rate_limit" },
         { status: 429 }
