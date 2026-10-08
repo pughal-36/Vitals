@@ -13,7 +13,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import type { ScanRow, QuickChecks, ScanTimings } from "@/lib/supabase/scans";
 import SeoLoadingTips from "@/components/SeoLoadingTips";
 
@@ -192,7 +192,6 @@ function TimingsBadge({ timings }: { timings: ScanTimings }) {
 /* ─── Main Component ─── */
 export default function UrlAuditForm({ initialScan }: { initialScan?: ScanRow }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [urlValue, setUrlValue] = useState(initialScan?.url || "");
   const [urlError, setUrlError] = useState<string | null>(null);
@@ -204,6 +203,7 @@ export default function UrlAuditForm({ initialScan }: { initialScan?: ScanRow })
   // Sync with initialScan when prop changes
   useEffect(() => {
     if (initialScan) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentScan(initialScan);
       setUrlValue(initialScan.url);
     }
@@ -235,7 +235,7 @@ export default function UrlAuditForm({ initialScan }: { initialScan?: ScanRow })
     if (!polling || !scanId) return;
 
     // Check immediately, then poll every 2s
-    checkScanStatus(scanId);
+    void checkScanStatus(scanId);
 
     const interval = setInterval(() => {
       // 90s timeout check
@@ -253,7 +253,7 @@ export default function UrlAuditForm({ initialScan }: { initialScan?: ScanRow })
         return;
       }
 
-      checkScanStatus(scanId);
+      void checkScanStatus(scanId);
     }, 2000);
 
     return () => clearInterval(interval);

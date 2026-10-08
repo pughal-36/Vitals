@@ -178,9 +178,12 @@ export default function AuditChat({
           try {
             const parsed = JSON.parse(match[1]);
             if (Array.isArray(parsed)) {
+              // eslint-disable-next-line react-hooks/set-state-in-effect
               setChips(parsed);
             }
-          } catch (e) {}
+          } catch {
+            // ignore invalid chip json
+          }
         }
       }
     }

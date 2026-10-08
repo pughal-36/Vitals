@@ -4,6 +4,14 @@ import { generateText } from "ai";
 import { geminiFlash } from "@/lib/gemini/model";
 import { updateScan, type QuickChecks, type ScanTimings } from "@/lib/supabase/scans";
 
+type AuditEntry = {
+  id?: string;
+  title?: string;
+  description?: string;
+  score?: number | null;
+  displayValue?: string | null;
+};
+
 export async function runScanPipeline(scanId: string, url: string, strategy: "mobile" | "desktop" = "mobile") {
   const startTime = Date.now();
   const timings: ScanTimings = {};
@@ -107,7 +115,7 @@ export async function runScanPipeline(scanId: string, url: string, strategy: "mo
       seo: Math.round((categories?.seo?.score ?? 0) * 100),
     };
 
-    const audits = (data.lighthouseResult?.audits || {}) as Record<string, any>;
+    const audits = (data.lighthouseResult?.audits || {}) as Record<string, AuditEntry>;
 
     // Extract key Core Web Vitals metrics
     const keyMetrics = {
@@ -121,11 +129,13 @@ export async function runScanPipeline(scanId: string, url: string, strategy: "mo
 
     // Extract trimmed failing audits
     const failingAudits = Object.values(audits)
-      .filter((a) => a && a.score !== null && a.score !== undefined && a.score < 1)
+      .filter((a): a is AuditEntry & { id: string; title: string; score: number } =>
+        Boolean(a && a.id && a.title && a.score !== null && a.score !== undefined && a.score < 1)
+      )
       .map((a) => ({
         id: a.id,
         title: a.title,
-        description: a.description,
+        description: a.description || "",
         score: a.score,
         displayValue: a.displayValue || null,
       }))
@@ -157,7 +167,7 @@ export async function runScanPipeline(scanId: string, url: string, strategy: "mo
 
     try {
       const topFailing = failingAudits.slice(0, 6).map(
-        (a) => `- ${a.title}: ${a.displayValue || ""} (${a.description?.replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1") || ""})`
+        (a) => `- ${a.title}: ${a.displayValue || ""} (${a.description.replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1")})`
       ).join("\n");
 
       const prompt = `You are an expert SEO and web performance consultant. Summarize this audit for ${url} in a concise, structured markdown readout.

@@ -195,11 +195,11 @@ export async function getScanById(id: string): Promise<ScanRow | null> {
     const row = data as ScanRow;
     const raw = row.raw_categories as Record<string, unknown> | null;
     if (raw) {
-      if (!row.status && raw._status) row.status = raw._status as any;
-      if (!row.quick_checks && raw._quick_checks) row.quick_checks = raw._quick_checks as any;
-      if (!row.summary && raw._summary) row.summary = raw._summary as any;
-      if (!row.error_text && raw._error_text) row.error_text = raw._error_text as any;
-      if (!row.timings && raw._timings) row.timings = raw._timings as any;
+      if (!row.status && raw._status) row.status = raw._status as ScanRow["status"];
+      if (!row.quick_checks && raw._quick_checks) row.quick_checks = raw._quick_checks as QuickChecks;
+      if (!row.summary && raw._summary) row.summary = raw._summary as string;
+      if (!row.error_text && raw._error_text) row.error_text = raw._error_text as string;
+      if (!row.timings && raw._timings) row.timings = raw._timings as ScanTimings;
     }
     // Default status to 'done' if scores exist and status is undefined
     if (!row.status) {

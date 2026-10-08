@@ -2,7 +2,43 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Primary Vitals Audit and Assistant Flow', () => {
   test('submits a URL for audit, navigates to assistant, and receives AI chat response', async ({ page }) => {
-    // Intercept audit API to return deterministic scan data
+    // Intercept scan API to return deterministic scan data
+    await page.route('**/api/scan**', async (route) => {
+      const method = route.request().method();
+      if (method === 'POST') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            ok: true,
+            id: '353b87a5-9081-4dfa-acd8-042d1873837b',
+            status: 'done',
+            cached: false,
+          }),
+        });
+      } else {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            ok: true,
+            scan: {
+              id: '353b87a5-9081-4dfa-acd8-042d1873837b',
+              url: 'https://example.com',
+              status: 'done',
+              score_performance: 95,
+              score_accessibility: 90,
+              score_best_practices: 85,
+              score_seo: 100,
+              created_at: new Date().toISOString(),
+              raw_categories: { categories: {}, failingAudits: [] },
+            },
+          }),
+        });
+      }
+    });
+
+    // Also support fallback intercept on /api/audit
     await page.route('**/api/audit', async (route) => {
       await route.fulfill({
         status: 200,
