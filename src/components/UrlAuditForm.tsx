@@ -10,10 +10,11 @@
  *   - Mobile-safe scrollable score cards (item 8)
  */
 
-import { useState, useRef, type FormEvent, useEffect } from "react";
+import { useState, useRef, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { AuditResult, AuditSuccess } from "@/app/api/audit/route";
 import type { ScanRow } from "@/lib/supabase/scans";
+import SeoLoadingTips from "@/components/SeoLoadingTips";
 
 /* ─── Helpers ─── */
 function isValidUrl(value: string): boolean {
@@ -110,7 +111,7 @@ export default function UrlAuditForm({ initialScan }: { initialScan?: ScanRow })
       bestPractices: initialScan.score_best_practices || 0,
       seo: initialScan.score_seo || 0,
     },
-    raw: initialScan.raw_categories as any,
+    raw: initialScan.raw_categories as unknown as AuditSuccess["raw"],
   } : null;
 
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">(initialScan ? "success" : "idle");
@@ -144,11 +145,12 @@ export default function UrlAuditForm({ initialScan }: { initialScan?: ScanRow })
           const recent = JSON.parse(localStorage.getItem("recentScans") || "[]");
           const updated = [data.id, ...recent.filter((id: string) => id !== data.id)].slice(0, 10);
           localStorage.setItem("recentScans", JSON.stringify(updated));
+          localStorage.setItem("vitals.scanId", data.id);
         } catch (err) {
           console.error("Failed to save to localStorage", err);
         }
         
-        router.push(`/audit/${data.id}`);
+        router.push(`/?scan=${encodeURIComponent(data.id)}`);
       } else {
         setResult(data);
         setStatus("error");
@@ -300,10 +302,11 @@ export default function UrlAuditForm({ initialScan }: { initialScan?: ScanRow })
         <div className="mt-8" aria-live="polite" aria-label="Audit in progress">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-            <p className="text-muted animate-pulse text-sm">
+            <p className="text-muted text-sm">
               Running Lighthouse audit — this takes 10–20 seconds…
             </p>
           </div>
+          <SeoLoadingTips />
           <ScoreSkeleton />
           {/* Skeleton lines for raw output */}
           <div className="space-y-2">

@@ -41,7 +41,12 @@ export async function listScans(limit = 50): Promise<ScanRow[]> {
 
 /** Fetch a single scan by ID (for the report page). */
 export async function getScanById(id: string): Promise<ScanRow | null> {
-  const { data, error } = await table().select("*").eq("id", id).single();
-  if (error) return null;
-  return data as ScanRow;
+  try {
+    const { data, error } = await table().select("*").eq("id", id).single();
+    if (error) return null;
+    return data as ScanRow;
+  } catch (error) {
+    console.error("Failed to restore scan", error);
+    return null;
+  }
 }

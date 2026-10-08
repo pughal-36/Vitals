@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getScanById } from "@/lib/supabase/scans";
 import type { ScanRow } from "@/lib/supabase/scans";
 
 export default function RecentScans() {
@@ -41,7 +40,8 @@ export default function RecentScans() {
         {scans.map(scan => (
           <Link 
             key={scan.id} 
-            href={`/audit/${scan.id}`}
+            href={`/?scan=${encodeURIComponent(scan.id)}`}
+            onClick={() => { try { localStorage.setItem("vitals.scanId", scan.id); } catch { /* storage is optional */ } }}
             className="flex items-center justify-between p-4 rounded-xl border border-border bg-surface/50 hover:bg-surface transition-colors"
           >
             <div className="flex flex-col">

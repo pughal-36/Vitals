@@ -10,11 +10,15 @@ export async function GET(req: Request) {
   }
 
   const scans = [];
-  for (const id of ids) {
-    if (id) {
-      const scan = await getScanById(id);
-      if (scan) scans.push(scan);
+  try {
+    for (const id of ids) {
+      if (id) {
+        const scan = await getScanById(id);
+        if (scan) scans.push(scan);
+      }
     }
+  } catch (error) {
+    console.error("Could not restore requested scans", error);
   }
 
   return NextResponse.json({ scans });

@@ -1,5 +1,7 @@
 import { getScanById } from "@/lib/supabase/scans";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import RememberScan from "@/components/RememberScan";
 
 function Dial({ score }: { score: number }) {
   const angle = -135 + score * 2.7;
@@ -21,13 +23,13 @@ function getState(score: number) {
   if (score >= 50) return "REVIEW";
   return "POOR";
 }
+type FailingAudit = { id: string; title: string; description?: string; score?: number | null; displayValue?: string | null };
 
 export default async function ReadoutPage({ params }: { params: Promise<{ scanId: string }> }) {
   const { scanId } = await params;
   const scan = await getScanById(scanId);
-
   if (!scan) {
-    notFound();
+    redirect("/readout");
   }
 
   const scoreCards = [
@@ -37,7 +39,7 @@ export default async function ReadoutPage({ params }: { params: Promise<{ scanId
     ["BEST PRACTICES", scan.score_best_practices || 0, getState(scan.score_best_practices || 0)],
   ] as const;
 
-  const raw = scan.raw_categories as any;
+  const raw = scan.raw_categories as { failingAudits?: FailingAudit[] } | null;
   const failingAudits = raw?.failingAudits || [];
   
   const composite = Math.round(
@@ -46,6 +48,14 @@ export default async function ReadoutPage({ params }: { params: Promise<{ scanId
 
   return (
     <main className="results-page flex-1">
+      <RememberScan scanId={scanId} />
+      <nav className="scan-route-links mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 pt-5" aria-label="Audit navigation">
+        <span className="font-mono text-[10px] tracking-[.1em] text-muted">SAVED AUDIT / {scan.id}</span>
+        <div className="flex gap-2 text-xs">
+          <Link href={`/?scan=${scanId}`} className="scan-route-link">Audit</Link>
+          <Link href={`/assistant/${scanId}?scan=${scanId}`} className="scan-route-link">Assistant</Link>
+        </div>
+      </nav>
       <section className="results-hero px-4 py-14 sm:py-20">
         <div className="mx-auto max-w-6xl flex flex-col sm:flex-row sm:items-end sm:justify-between gap-12">
           <div>
@@ -96,11 +106,11 @@ export default async function ReadoutPage({ params }: { params: Promise<{ scanId
                 </tr>
               </thead>
               <tbody>
-                {failingAudits.length > 0 ? failingAudits.map((audit: any) => (
+                {failingAudits.length > 0 ? failingAudits.map((audit) => (
                   <tr key={audit.id} className="border-b border-[#464C52] hover:bg-[#33373D] transition-colors">
                     <td className="px-5 py-4 text-[#D6DADD] w-1/4">{audit.title}</td>
                     <td className="px-5 py-4 text-[#979EA4] w-2/4">{audit.description?.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')}</td>
-                    <td className="px-5 py-4 text-[#E8A33D]">{audit.score !== null ? audit.score.toFixed(2) : '-'}</td>
+                    <td className="px-5 py-4 text-[#E8A33D]">{audit.score != null ? audit.score.toFixed(2) : '-'}</td>
                     <td className="px-5 py-4 text-[#858C92]">{audit.displayValue || '-'}</td>
                   </tr>
                 )) : (
