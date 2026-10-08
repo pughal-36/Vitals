@@ -8,6 +8,7 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: pushMock,
   }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 describe('UrlAuditForm', () => {
@@ -36,7 +37,7 @@ describe('UrlAuditForm', () => {
     await user.click(submitBtn);
 
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'Please enter a valid URL starting with https:// or http://'
+      'Please enter a valid URL starting with https://'
     );
   });
 
@@ -56,8 +57,29 @@ describe('UrlAuditForm', () => {
 
   it('submits valid URL and navigates on success', async () => {
     const user = userEvent.setup();
-    global.fetch = vi.fn().mockResolvedValueOnce({
-      json: async () => ({ ok: true, id: 'scan-123' }),
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (typeof url === 'string' && url.includes('/api/scan/scan-123')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            ok: true,
+            scan: {
+              id: 'scan-123',
+              url: 'https://example.com',
+              status: 'done',
+              score_performance: 95,
+              score_accessibility: 98,
+              score_best_practices: 100,
+              score_seo: 100,
+              created_at: new Date().toISOString(),
+            },
+          }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ ok: true, id: 'scan-123', status: 'pending' }),
+      });
     });
 
     render(<UrlAuditForm />);
