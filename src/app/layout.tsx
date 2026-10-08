@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Mono, Space_Grotesk } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 
 const geometric = Space_Grotesk({ variable: "--font-geometric", subsets: ["latin"] });
@@ -17,7 +18,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${geometric.variable} ${instrument.variable}`}>
       <body className="min-h-screen flex flex-col">
-        <Navigation />
+        <Suspense fallback={<nav className="vitals-nav sticky top-0 z-50" />}>
+          <Navigation />
+        </Suspense>
         <div className="flex-1 flex flex-col">{children}</div>
         <footer className="border-t border-[#AEB4BA] bg-[#202226] py-5 text-center text-[9px] font-mono tracking-[.08em] text-[#858C92]">
           <p>VITALS &mdash; A QUIET SEO INSTRUMENT FOR LOUDER SIGNALS.</p>
