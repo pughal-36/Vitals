@@ -168,7 +168,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .workflow-step p { margin-top: 4px; color: var(--color-muted); font-size: 12px; line-height: 1.6; }
 .seo-tip { display: flex; align-items: flex-start; gap: 12px; min-height: 44px; border-left: 2px solid var(--steel-shadow); padding: 7px 0 7px 12px; color: var(--color-muted); }
 .seo-tip-index { flex: 0 0 auto; padding-top: 2px; color: var(--amber-muted); font: 9px var(--font-instrument), monospace; letter-spacing: .08em; }
-.seo-tip-copy { color: var(--graphite-soft); font-size: 13px; line-height: 1.5; }
+.seo-tip-copy { color: var(--graphite-soft); font-size: 13px; line-height: 1.5; animation: seo-tip-enter 220ms ease-out both; }
+@keyframes seo-tip-enter { from { opacity: .55; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
 .scan-empty { display: flex; align-items: flex-start; }
 .scan-route-links { min-height: 44px; }
 .scan-route-link { border: 1px solid var(--steel-shadow); border-radius: var(--radius-md); padding: 8px 12px; color: var(--graphite); background: var(--paper); transition: background 160ms ease; }
@@ -178,4 +179,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   .vitals-hero { min-height: auto; }
   .globe-panel { min-height: 280px; aspect-ratio: 1 / 1; }
   .globe-instrument { max-width: 440px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seo-tip-copy { animation: none; }
 }

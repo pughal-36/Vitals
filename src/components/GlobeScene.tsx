@@ -81,6 +81,10 @@ function Earth({ input, scanId, score }: { input: MutableRefObject<MotionInput>;
       state.dragX *= 0.84;
       state.dragY *= 0.84;
     } else {
+      root.current.rotation.y += state.dragX * 0.006;
+      root.current.rotation.x += state.dragY * 0.005;
+      state.dragX *= 0.84;
+      state.dragY *= 0.84;
       root.current.rotation.y += state.wheel;
       state.wheel *= 0.88;
       const hasAudit = score !== undefined && Boolean(scanId);
