@@ -140,6 +140,13 @@ export function FetchMetaTagsUI({ part }: { part: any }) {
   return null;
 }
 
+function getMessageText(message: UIMessage): string {
+  return message.parts
+    .filter((part): part is { type: "text"; text: string } => part.type === "text")
+    .map((part) => part.text)
+    .join("");
+}
+
 export default function AuditChat({ 
   scanId, 
   initialMessages = [], 
@@ -269,13 +276,6 @@ export default function AuditChat({
     setIsAtBottom(true);
   };
 
-  // ─── Extract text from message parts ───
-  const getMessageText = (message: UIMessage): string => {
-    return message.parts
-      .filter((part): part is { type: "text"; text: string } => part.type === "text")
-      .map((part) => part.text)
-      .join("");
-  };
 
   return (
     <div className="flex flex-col h-[calc(100dvh-theme(spacing.16)-theme(spacing.20))] max-w-3xl mx-auto w-full px-4">

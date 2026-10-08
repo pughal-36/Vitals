@@ -235,6 +235,7 @@ export default function UrlAuditForm({ initialScan }: { initialScan?: ScanRow })
     if (!polling || !scanId) return;
 
     // Check immediately, then poll every 2s
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void checkScanStatus(scanId);
 
     const interval = setInterval(() => {
