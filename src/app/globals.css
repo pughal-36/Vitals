@@ -163,7 +163,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .score-fill[data-category="seo"] { --score-color: #4E587F; }
 
 /* Paper-and-ink interiors */
-.results-page, .vitals-chat-page { min-height: 100vh; background: var(--paper); color: var(--ink); }
+.results-page { min-height: 100vh; background: var(--paper); color: var(--ink); }
+.vitals-chat-page { min-height: 0; background: var(--paper); color: var(--ink); }
 .results-hero { color: white; background: var(--navy); }
 .results-panel { border: 1px solid var(--line); border-radius: 12px; background: white; box-shadow: 0 8px 28px rgba(36,43,66,.06); }
 .results-page .text-muted, .vitals-chat-page .text-muted { color: var(--muted); }
@@ -182,6 +183,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .scan-route-link { min-height: 44px; display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; color: var(--navy); background: white; }
 .scan-route-link:hover { background: #ECEAE2; }
 .vitals-chat-page > div { max-width: 980px; }
+.vitals-chat-page > div:not(.scan-route-links) { height: calc(100dvh - 76px - 80px - 9rem); }
 .vitals-chat-page .bg-surface { background: white; }
 .vitals-chat-page .border-border { border-color: var(--line); }
 .vitals-chat-page textarea { background: white; border-color: var(--line); color: var(--ink); }
@@ -190,7 +192,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .vitals-chat-page .bg-primary.text-white:hover { background: var(--navy-deep); }
 .vitals-chat-page .prose, .vitals-chat-page .prose-invert { color: var(--ink); }
 footer.vitals-footer { border-color: var(--navy-deep); background: var(--navy); color: rgba(255,255,255,.84); }
-footer.vitals-footer a { color: white; }
+footer.vitals-footer a { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; color: white; }
 
 /* Globe container and graceful static rendering. */
 .globe-instrument { width: 100%; max-width: 540px; margin-inline: auto; }
@@ -223,6 +225,7 @@ footer.vitals-footer a { color: white; }
 .about-section h2 { margin: 0 0 16px; font-size: clamp(1.35rem, 3vw, 1.8rem); letter-spacing: -.035em; }
 .about-section p, .about-section li { color: var(--muted); font-size: 15px; line-height: 1.7; }
 .about-section a { min-height: 44px; display: inline-flex; align-items: center; color: var(--navy); text-decoration: underline; text-underline-offset: 3px; }
+.about-section a:not(.about-contribute) { min-width: 44px; }
 .about-steps { display: grid; gap: 20px; grid-template-columns: repeat(3,minmax(0,1fr)); padding: 0; list-style: none; }
 .about-steps li { border-left: 3px solid var(--olive); padding: 4px 0 4px 14px; }
 .about-steps strong { display: block; margin-bottom: 5px; color: var(--ink); }
@@ -231,6 +234,12 @@ footer.vitals-footer a { color: white; }
 .credit-list strong { color: var(--ink); }
 .credit-meta { display: block; margin-top: 4px; font-size: 13px; }
 .about-contribute { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; margin-top: 10px; padding: 10px 18px; border-radius: 999px; background: var(--navy); color: white !important; text-decoration: none !important; }
+.vitals-home #audit a { min-height: 44px; display: inline-flex; align-items: center; }
+.vitals-home #audit summary { min-height: 44px; display: flex; align-items: center; }
+.vitals-home button { min-height: 44px; }
+.vitals-chat-page a { min-height: 44px; display: inline-flex; align-items: center; }
+.vitals-chat-page button { min-height: 44px; }
+.vitals-chat-page input, .vitals-chat-page textarea { min-height: 44px; }
 .about-built { color: var(--ink) !important; }
 
 @media (max-width: 640px) {
@@ -253,7 +262,7 @@ footer.vitals-footer a { color: white; }
   .about-steps { grid-template-columns: 1fr; gap: 10px; }
   .results-page .results-hero h1 { font-size: clamp(2.1rem, 10vw, 3.2rem); overflow-wrap: anywhere; }
   .results-page .score-list { gap: 16px; }
-  .vitals-chat-page > div:not(.scan-route-links) { height: calc(100vh - 64px - 72px); }
+  .vitals-chat-page > div:not(.scan-route-links) { height: calc(100dvh - 64px - 80px - 9rem); }
 }
 @media (min-width: 641px) and (max-width: 900px) {
   .hero-copy h1 { font-size: clamp(5rem, 11vw, 8rem); }
