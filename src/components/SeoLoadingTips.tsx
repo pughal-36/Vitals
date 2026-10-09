@@ -3,14 +3,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const fallbackTips = [
-  "Fast pages give both people and crawlers fewer reasons to leave.",
-  "A clear title helps searchers know what makes a page useful.",
-  "Descriptive links make the next step easier for visitors and crawlers.",
-  "Check important pages on a real phone-sized viewport, not just a desktop.",
-  "Useful image descriptions improve context when images cannot be seen.",
-  "A sitemap is a discovery aid, not a substitute for helpful links.",
-  "One strong page title beats a pile of repeated keywords.",
-  "Keep your canonical URL consistent across redirects and page markup.",
+  "A useful page title tells people what the page is about before they open it.",
+  "Write a distinct title for each important page; repeated titles make pages harder to tell apart.",
+  "A concise meta description can help searchers decide whether a result fits their needs.",
+  "Search engines may create a snippet from page content instead of using your meta description.",
+  "Describe an image's purpose in its alt text; decorative images can use empty alt text.",
+  "Clear heading levels help readers scan a page and understand its structure.",
+  "Keep the main heading focused on the page's actual topic.",
+  "Compress large images and serve appropriately sized versions to reduce page weight.",
+  "Slow loading can frustrate visitors, especially on mobile connections.",
+  "Test key pages on a phone-sized screen as well as on desktop.",
+  "Make sure important text and controls remain readable at narrow widths.",
+  "A descriptive link label tells people where a link will take them.",
+  "Use a canonical URL when the same or very similar content is reachable at multiple URLs.",
+  "A sitemap can help search engines discover URLs; it does not guarantee indexing.",
+  "Check that important pages can be reached through links on your site.",
 ];
 const KEY = "vitals.seoTips.seen.v1";
 
