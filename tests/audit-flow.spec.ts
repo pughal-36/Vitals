@@ -85,7 +85,7 @@ test.describe('Primary Vitals Audit and Assistant Flow', () => {
 
     // 1. Visit the home page
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /audit your site with vitals\. see where you stand out\./i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /audit your site'?s web vitals/i })).toBeVisible();
     await expect(page.locator('.globe-panel')).toBeVisible();
 
     // 2. Submit URL for audit in the form
