@@ -1,15 +1,16 @@
 "use client";
 
 import { Html, useGLTF } from "@react-three/drei";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import * as THREE from "three";
 
-const OCEAN = "#3A3E44"; // graphite-soft
-const LAND = "#C8CDD2"; // steel-highlight
-const STEEL = "#D9DCE0"; // steel-muted
-const AMBER = "#E8A33D"; // phosphor-amber, reserved for the completed-audit cue
+const OCEAN = "#E8D86A"; // sun yellow
+const LAND = "#7479A9"; // blue-violet
+const STEEL = "#59683D"; // olive
+const AMBER = "#F3E45D"; // palette yellow, reserved for the site pin
 const RADIUS = 0.96;
+const EARTH_ROTATION_RADIANS_PER_SECOND = (Math.PI * 2) / 20;
 
 type MotionInput = { x: number; y: number; dragging: boolean; dragX: number; dragY: number; wheel: number; zoom: number };
 type Props = { scanId?: string; score?: number; active: boolean };
@@ -22,6 +23,7 @@ function hashString(value: string) {
 
 function Earth({ input, scanId, score }: { input: MutableRefObject<MotionInput>; scanId?: string; score?: number }) {
   const root = useRef<THREE.Group>(null);
+  const spin = useRef<THREE.Group>(null);
   const pin = useRef<THREE.Group>(null);
   const ringA = useRef<THREE.Mesh>(null);
   const ringB = useRef<THREE.Mesh>(null);
@@ -73,7 +75,7 @@ function Earth({ input, scanId, score }: { input: MutableRefObject<MotionInput>;
   useFrame((_, delta) => {
     if (!root.current) return;
     const state = input.current;
-    const step = Math.min(delta, 0.04);
+    const step = delta;
     if (state.dragging) {
       root.current.rotation.y += state.dragX * 0.006;
       root.current.rotation.x += state.dragY * 0.005;
@@ -88,12 +90,13 @@ function Earth({ input, scanId, score }: { input: MutableRefObject<MotionInput>;
       root.current.rotation.y += state.wheel;
       state.wheel *= 0.88;
       const hasAudit = score !== undefined && Boolean(scanId);
-      if (!hasAudit) root.current.rotation.y += 0.075 * step;
+
       const targetX = hasAudit ? coords.latitude : -state.y * 0.16;
       const targetY = hasAudit ? -coords.longitude : state.x * 0.18;
       root.current.rotation.x = THREE.MathUtils.damp(root.current.rotation.x, targetX, 2.2, step);
       root.current.rotation.y = THREE.MathUtils.damp(root.current.rotation.y, targetY, 1.5, step);
     }
+    if (spin.current) spin.current.rotation.y += EARTH_ROTATION_RADIANS_PER_SECOND * step;
     if (pin.current && scanId && score !== undefined) {
       const t = Math.min(1, (pin.current.scale.x + step * 1.7));
       pin.current.scale.setScalar(THREE.MathUtils.damp(pin.current.scale.x, t, 4, step));
@@ -113,12 +116,13 @@ function Earth({ input, scanId, score }: { input: MutableRefObject<MotionInput>;
 
   return (
     <group ref={root} scale={1.37}>
+      <group ref={spin}>
       <primitive object={earth} />
       {sites.map(([longitude, latitude], index) => {
         const normal = new THREE.Vector3(Math.sin(longitude) * Math.cos(latitude), Math.sin(latitude), Math.cos(longitude) * Math.cos(latitude));
         return <mesh key={index} position={normal.clone().multiplyScalar(RADIUS)} scale={0.018}>
           <sphereGeometry args={[1, 8, 6]} />
-          <meshBasicMaterial color={index % 2 ? STEEL : "#B87E2F"} />
+          <meshBasicMaterial color={index % 2 ? STEEL : LAND} />
         </mesh>;
       })}
       {scanId && score !== undefined && (
@@ -150,16 +154,38 @@ function Earth({ input, scanId, score }: { input: MutableRefObject<MotionInput>;
           </group>
         </group>
       )}
+      </group>
     </group>
   );
 }
 
 function Scene({ scanId, score, input }: { scanId?: string; score?: number; input: MutableRefObject<MotionInput> }) {
   return <>
-    <ambientLight color="#E8E9EB" intensity={0.78} />
-    <directionalLight color="#F0F1F2" intensity={1.15} position={[3, 4, 5]} />
+    <ambientLight color="#FFFFFF" intensity={0.82} />
+    <directionalLight color="#FFF9D8" intensity={1.1} position={[3, 4, 5]} />
     <Earth input={input} scanId={scanId} score={score} />
   </>;
+}
+
+function FrameLimiter({ active }: { active: boolean }) {
+  const invalidate = useThree((state) => state.invalidate);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const frameInterval = useRef(1000 / 60);
+  useEffect(() => {
+    if (active) frameInterval.current = window.matchMedia("(max-width: 640px)").matches ? 1000 / 30 : 1000 / 60;
+    return () => {
+      if (timer.current !== null) clearTimeout(timer.current);
+      timer.current = null;
+    };
+  }, [active]);
+  useFrame(() => {
+    if (!active || timer.current !== null) return;
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      invalidate();
+    }, frameInterval.current);
+  });
+  return null;
 }
 
 export default function GlobeScene({ scanId, score, active }: Props) {
@@ -185,7 +211,8 @@ export default function GlobeScene({ scanId, score, active }: Props) {
     }}
     onWheel={(event) => { event.preventDefault(); input.current.zoom = THREE.MathUtils.clamp(input.current.zoom + event.deltaY * 0.001, -0.55, 1.25); input.current.wheel += event.deltaY * 0.00025; }}
   >
-    <Canvas dpr={[1, 1.5]} camera={{ position: [0, 0, 3.15], fov: 38 }} frameloop={active ? "always" : "never"} gl={{ antialias: true, alpha: true, powerPreference: "low-power" }}>
+    <Canvas dpr={[1, 1.5]} camera={{ position: [0, 0, 3.15], fov: 38 }} frameloop={active ? "demand" : "never"} gl={{ antialias: true, alpha: true, powerPreference: "low-power" }}>
+      <FrameLimiter active={active} />
       <Scene scanId={scanId} score={score} input={input} />
     </Canvas>
   </div>;

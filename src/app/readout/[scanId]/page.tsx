@@ -3,128 +3,89 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import RememberScan from "@/components/RememberScan";
 
-function Dial({ score }: { score: number }) {
-  const angle = -135 + score * 2.7;
-  return (
-    <div className="results-dial" aria-label={`${score} out of 100`}>
-      <div className="results-dial-face">
-        <div className="results-dial-arc" />
-        <div className="results-dial-needle" style={{ transform: `rotate(${angle}deg)` }} />
-        <div className="results-dial-hub" />
-        <div className="absolute inset-0 flex items-center justify-center pt-10 text-[#E8A33D] font-mono text-3xl">{score}</div>
-        <div className="absolute inset-x-0 top-[62%] text-center text-[8px] tracking-[.12em] text-[#9EA4AA] font-mono">/ 100</div>
-      </div>
-    </div>
-  );
-}
-
-function getState(score: number) {
-  if (score >= 90) return "GOOD";
-  if (score >= 50) return "REVIEW";
-  return "POOR";
-}
 type FailingAudit = { id: string; title: string; description?: string; score?: number | null; displayValue?: string | null };
 
 export default async function ReadoutPage({ params }: { params: Promise<{ scanId: string }> }) {
   const { scanId } = await params;
   const scan = await getScanById(scanId);
-  if (!scan) {
-    redirect("/readout");
-  }
+  if (!scan) redirect("/readout");
 
-  const scoreCards = [
-    ["PERFORMANCE", scan.score_performance || 0, getState(scan.score_performance || 0)],
-    ["SEO", scan.score_seo || 0, getState(scan.score_seo || 0)],
-    ["ACCESSIBILITY", scan.score_accessibility || 0, getState(scan.score_accessibility || 0)],
-    ["BEST PRACTICES", scan.score_best_practices || 0, getState(scan.score_best_practices || 0)],
-  ] as const;
-
+  const scores = [
+    { label: "Performance", key: "performance", score: scan.score_performance ?? 0 },
+    { label: "Accessibility", key: "accessibility", score: scan.score_accessibility ?? 0 },
+    { label: "Best Practices", key: "best-practices", score: scan.score_best_practices ?? 0 },
+    { label: "SEO", key: "seo", score: scan.score_seo ?? 0 },
+  ];
   const raw = scan.raw_categories as { failingAudits?: FailingAudit[] } | null;
   const failingAudits = raw?.failingAudits || [];
-  
-  const composite = Math.round(
-    ((scan.score_performance || 0) + (scan.score_seo || 0) + (scan.score_accessibility || 0) + (scan.score_best_practices || 0)) / 4
-  );
+  const composite = Math.round(scores.reduce((total, item) => total + item.score, 0) / scores.length);
 
   return (
     <main className="results-page flex-1">
       <RememberScan scanId={scanId} />
       <nav className="scan-route-links mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 pt-5" aria-label="Audit navigation">
-        <span className="font-mono text-[10px] tracking-[.1em] text-muted">SAVED AUDIT / {scan.id}</span>
-        <div className="flex gap-2 text-xs">
+        <span className="text-sm text-muted">Saved audit / {scan.id}</span>
+        <div className="flex gap-2 text-sm">
           <Link href={`/?scan=${scanId}`} className="scan-route-link">Audit</Link>
           <Link href={`/assistant/${scanId}?scan=${scanId}`} className="scan-route-link">Assistant</Link>
         </div>
       </nav>
-      <section className="results-hero px-4 py-14 sm:py-20">
-        <div className="mx-auto max-w-6xl flex flex-col sm:flex-row sm:items-end sm:justify-between gap-12">
-          <div>
-            <div className="font-mono text-[9px] tracking-[.1em] text-[#E8A33D] mb-5">RESULTS / CALIBRATED READOUT</div>
-            <h1 className="text-5xl sm:text-7xl font-semibold leading-[.92] tracking-[-.07em] break-all">{scan.url.replace(/^https?:\/\//, '')}</h1>
-            <p className="mt-5 font-mono text-xs text-[#AEB4BA]">{scan.url}</p>
+      <section className="results-hero px-5 py-14 sm:px-8 sm:py-20">
+        <div className="mx-auto flex max-w-6xl flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <p className="mb-5 text-sm text-white/80">Saved audit</p>
+            <h1 className="break-all text-4xl font-semibold leading-tight tracking-tight sm:text-6xl">{scan.url.replace(/^https?:\/\//, "")}</h1>
+            <p className="mt-4 break-all text-sm text-white/80">{scan.url}</p>
           </div>
-          <div className="max-w-xs">
-            <div className="font-mono text-[9px] tracking-[.1em] text-[#858C92]">COMPOSITE SCORE</div>
-            <div className="mt-2 text-[#E8A33D] font-mono text-6xl leading-none tracking-[-.1em]">{composite}<span className="ml-2 text-base tracking-normal text-[#9EA4AA]">/100</span></div>
-            <div className="mt-4 flex items-center gap-2 font-mono text-[9px] text-[#AEB4BA]"><span className="w-1.5 h-1.5 rounded-full bg-[#E8A33D]" /> {scan.strategy.toUpperCase()} STRATEGY</div>
+          <div className="shrink-0">
+            <p className="text-sm text-white/80">Overall score</p>
+            <p className="mt-2 text-6xl font-bold tabular-nums text-[#E8D86A]">{composite}<span className="ml-2 text-base font-normal text-white/80">/100</span></p>
+            <p className="mt-3 text-sm text-white/80">{scan.strategy} strategy</p>
           </div>
         </div>
       </section>
 
-      <section className="px-4 py-16 sm:py-24">
+      <section className="px-5 py-12 sm:px-8 sm:py-16">
+        <div className="mx-auto max-w-4xl">
+          <div className="mb-8">
+            <p className="mb-3 text-sm font-semibold text-accent">Score summary</p>
+            <h2 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">Four checks.<br />One clear direction.</h2>
+          </div>
+          <div className="results-panel p-5 sm:p-8">
+            <div className="score-list" aria-label="Lighthouse category scores">
+              {scores.map(({ label, key, score }) => {
+                const value = Math.max(0, Math.min(100, score));
+                return <div key={key} className="score-row">
+                  <div className="score-row-head"><span>{label}</span><span className="score-value">{score}/100</span></div>
+                  <div className="score-track" role="progressbar" aria-label={`${label} score`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={value}>
+                    <div className="score-fill" data-category={key} style={{ width: `${value}%` }} />
+                  </div>
+                </div>;
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-y border-border bg-[#ECEAE2] px-5 py-12 sm:px-8 sm:py-16">
         <div className="mx-auto max-w-6xl">
-          <div className="mb-10"><div className="font-mono text-[9px] tracking-[.1em] text-[#B87E2F] mb-4">01 / SIGNALS</div><h2 className="text-4xl sm:text-5xl font-semibold leading-none tracking-[-.06em]">Four readings.<br /><span className="text-[#B87E2F]">One clear direction.</span></h2></div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {scoreCards.map(([label, score, state], i) => (
-              <article key={label} className="results-panel p-5">
-                <div className="flex justify-between items-center font-mono text-[9px] tracking-[.06em]"><span>{label}</span><span className="text-[#B87E2F]">● {state}</span></div>
-                <div className="mt-4"><Dial score={score as number} /></div>
-                <div className="mt-3 flex justify-between font-mono text-[8px] text-[#6E757B]"><span>ANALOG SIGNAL</span><span>VTL / 0{i + 1}</span></div>
+          <div className="mb-8">
+            <p className="mb-3 text-sm font-semibold text-accent">Audit details</p>
+            <h2 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">What needs attention?</h2>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {failingAudits.length > 0 ? failingAudits.map((audit) => (
+              <article key={audit.id} className="results-panel min-w-0 p-4 sm:p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="min-w-0 font-semibold">{audit.title}</h3>
+                  <span className="shrink-0 text-sm font-semibold tabular-nums text-primary">{audit.score != null ? audit.score.toFixed(2) : "—"}</span>
+                </div>
+                {audit.description && <p className="mt-2 text-sm leading-6 text-muted">{audit.description.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")}</p>}
+                {audit.displayValue && <p className="mt-3 text-sm font-medium">{audit.displayValue}</p>}
               </article>
-            ))}
+            )) : <p className="results-panel p-6 text-muted">No failing audits detected.</p>}
           </div>
-        </div>
-      </section>
-
-      <section className="bg-[#DADDDF] border-y border-[#AEB4BA] px-4 py-16 sm:py-24">
-        <div className="mx-auto max-w-6xl">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-9">
-            <div>
-              <div className="font-mono text-[9px] tracking-[.1em] text-[#B87E2F] mb-4">02 / FAILING AUDITS</div>
-              <h2 className="text-4xl sm:text-5xl font-semibold leading-none tracking-[-.06em]">Read the detail<br /><span className="text-[#B87E2F]">behind the dial.</span></h2>
-            </div>
-            <span className="font-mono text-[9px] text-[#6E757B]">{scan.url.toUpperCase()} / 001</span>
-          </div>
-          <div className="overflow-x-auto results-panel bg-[#2B2E33] text-[#E8E9EB]">
-            <table className="w-full min-w-[760px] border-collapse font-mono text-[10px]">
-              <thead>
-                <tr className="border-b border-[#50565C] text-left text-[8px] tracking-[.1em] text-[#858C92]">
-                  <th className="px-5 py-4 font-normal">AUDIT</th>
-                  <th className="px-5 py-4 font-normal">DESCRIPTION</th>
-                  <th className="px-5 py-4 font-normal">SCORE</th>
-                  <th className="px-5 py-4 font-normal">VALUE</th>
-                </tr>
-              </thead>
-              <tbody>
-                {failingAudits.length > 0 ? failingAudits.map((audit) => (
-                  <tr key={audit.id} className="border-b border-[#464C52] hover:bg-[#33373D] transition-colors">
-                    <td className="px-5 py-4 text-[#D6DADD] w-1/4">{audit.title}</td>
-                    <td className="px-5 py-4 text-[#979EA4] w-2/4">{audit.description?.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')}</td>
-                    <td className="px-5 py-4 text-[#E8A33D]">{audit.score != null ? audit.score.toFixed(2) : '-'}</td>
-                    <td className="px-5 py-4 text-[#858C92]">{audit.displayValue || '-'}</td>
-                  </tr>
-                )) : (
-                  <tr>
-                    <td colSpan={4} className="px-5 py-8 text-center text-[#979EA4]">No failing audits detected!</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-            <div className="flex justify-between gap-4 px-5 py-4 font-mono text-[8px] tracking-[.05em] text-[#858C92]">
-              <span>● LIVE DATA FROM SUPABASE</span>
-              <span>{failingAudits.length < 10 ? `0${failingAudits.length}` : failingAudits.length} FAILING AUDITS</span>
-            </div>
-          </div>
+          <p className="mt-5 text-sm text-muted">{failingAudits.length} failing {failingAudits.length === 1 ? "audit" : "audits"} · Live data from Supabase</p>
         </div>
       </section>
     </main>

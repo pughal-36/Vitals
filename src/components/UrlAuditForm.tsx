@@ -31,17 +31,6 @@ function isValidUrl(value: string): boolean {
   }
 }
 
-function scoreColor(score: number): string {
-  if (score >= 90) return "text-accent";
-  if (score >= 50) return "text-warning";
-  return "text-danger";
-}
-
-function scoreBg(score: number): string {
-  if (score >= 90) return "bg-accent/10 border-accent/30";
-  if (score >= 50) return "bg-warning/10 border-warning/30";
-  return "bg-danger/10 border-danger/30";
-}
 
 /* ─── Quick Checks Component (Phase 1) ─── */
 function QuickChecksCard({ quickChecks }: { quickChecks: QuickChecks }) {
@@ -118,7 +107,7 @@ function QuickChecksCard({ quickChecks }: { quickChecks: QuickChecks }) {
   );
 }
 
-/* ─── Score Cards with Loading States ─── */
+/* ─── Accessible score bars with loading states ─── */
 function ScoreCards({
   scores,
   loading = false,
@@ -131,42 +120,27 @@ function ScoreCards({
   };
   loading?: boolean;
 }) {
-  const cards = [
-    { label: "Performance", score: scores?.performance },
-    { label: "Accessibility", score: scores?.accessibility },
-    { label: "Best Practices", score: scores?.bestPractices },
-    { label: "SEO", score: scores?.seo },
+  const categories = [
+    { label: "Performance", key: "performance", score: scores?.performance },
+    { label: "Accessibility", key: "accessibility", score: scores?.accessibility },
+    { label: "Best Practices", key: "best-practices", score: scores?.bestPractices },
+    { label: "SEO", key: "seo", score: scores?.seo },
   ];
 
   return (
-    <div className="overflow-x-auto -mx-1 px-1 mb-6">
-      <div className="flex sm:grid sm:grid-cols-4 gap-3 min-w-max sm:min-w-0">
-        {cards.map(({ label, score }) => {
-          const isScoreLoaded = score !== null && score !== undefined && !loading;
-          return (
-            <div
-              key={label}
-              className={`rounded-2xl border p-4 text-center transition-all duration-200 w-36 sm:w-auto ${
-                isScoreLoaded ? scoreBg(score) : "border-border bg-surface/40"
-              }`}
-            >
-              {isScoreLoaded ? (
-                <>
-                  <p className={`text-3xl sm:text-4xl font-bold tabular-nums ${scoreColor(score)}`}>
-                    {score}
-                  </p>
-                  <p className="text-xs text-muted mt-1 font-medium">{label}</p>
-                </>
-              ) : (
-                <div className="animate-pulse">
-                  <div className="h-10 bg-border/40 rounded-lg mb-2 mx-auto w-16" />
-                  <div className="h-3 bg-border/30 rounded w-20 mx-auto" />
-                </div>
-              )}
+    <div className="score-list mb-6" aria-label="Lighthouse category scores">
+      {categories.map(({ label, key, score }) => {
+        const isScoreLoaded = score !== null && score !== undefined && !loading;
+        const value = isScoreLoaded ? Math.max(0, Math.min(100, score ?? 0)) : 0;
+        return (
+          <div key={label} className="score-row">
+            <div className="score-row-head"><span>{label}</span><span className="score-value">{isScoreLoaded ? `${score}/100` : "—"}</span></div>
+            <div className="score-track" role="progressbar" aria-label={`${label} score`} aria-valuemin={0} aria-valuemax={100} {...(isScoreLoaded ? { "aria-valuenow": value } : { "aria-valuetext": "Score pending" })}>
+              <div className="score-fill" data-category={key} style={{ width: `${value}%` }} />
             </div>
-          );
-        })}
-      </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
