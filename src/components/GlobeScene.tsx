@@ -1,7 +1,7 @@
 "use client";
 
 import { Html, useGLTF } from "@react-three/drei";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
 import * as THREE from "three";
 
@@ -167,6 +167,27 @@ function Scene({ scanId, score, input }: { scanId?: string; score?: number; inpu
   </>;
 }
 
+function FrameLimiter({ active }: { active: boolean }) {
+  const invalidate = useThree((state) => state.invalidate);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const frameInterval = useRef(1000 / 60);
+  useEffect(() => {
+    if (active) frameInterval.current = window.matchMedia("(max-width: 640px)").matches ? 1000 / 30 : 1000 / 60;
+    return () => {
+      if (timer.current !== null) clearTimeout(timer.current);
+      timer.current = null;
+    };
+  }, [active]);
+  useFrame(() => {
+    if (!active || timer.current !== null) return;
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      invalidate();
+    }, frameInterval.current);
+  });
+  return null;
+}
+
 export default function GlobeScene({ scanId, score, active }: Props) {
   const input = useRef<MotionInput>({ x: 0, y: 0, dragging: false, dragX: 0, dragY: 0, wheel: 0, zoom: 0 });
   const pointer = useRef({ down: false, x: 0, y: 0 });
@@ -190,7 +211,8 @@ export default function GlobeScene({ scanId, score, active }: Props) {
     }}
     onWheel={(event) => { event.preventDefault(); input.current.zoom = THREE.MathUtils.clamp(input.current.zoom + event.deltaY * 0.001, -0.55, 1.25); input.current.wheel += event.deltaY * 0.00025; }}
   >
-    <Canvas dpr={[1, 2]} camera={{ position: [0, 0, 3.15], fov: 38 }} frameloop={active ? "always" : "never"} gl={{ antialias: true, alpha: true, powerPreference: "low-power" }}>
+    <Canvas dpr={[1, 1.5]} camera={{ position: [0, 0, 3.15], fov: 38 }} frameloop={active ? "demand" : "never"} gl={{ antialias: true, alpha: true, powerPreference: "low-power" }}>
+      <FrameLimiter active={active} />
       <Scene scanId={scanId} score={score} input={input} />
     </Canvas>
   </div>;

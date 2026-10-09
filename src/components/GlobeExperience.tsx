@@ -57,8 +57,13 @@ export default function GlobeExperience({ scanId, score }: { scanId?: string; sc
     setStaticOnly(motion || lowPower || !supportsWebGL());
     const node = panelRef.current;
     if (!node) return;
+    let warmTimer: number | undefined;
     const warmObserver = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) { setNearViewport(true); warmObserver.disconnect(); }
+      if (entry.isIntersecting) {
+        warmObserver.disconnect();
+        // Let the headline and primary action paint before loading WebGL.
+        warmTimer = window.setTimeout(() => setNearViewport(true), 1500);
+      }
     }, { rootMargin: "220px 0px", threshold: 0.01 });
     const visibleObserver = new IntersectionObserver(([entry]) => {
       intersectsViewport.current = entry.isIntersecting;
@@ -68,7 +73,7 @@ export default function GlobeExperience({ scanId, score }: { scanId?: string; sc
     visibleObserver.observe(node);
     const onVisibility = () => setVisible(document.visibilityState === "visible" && intersectsViewport.current);
     document.addEventListener("visibilitychange", onVisibility);
-    return () => { warmObserver.disconnect(); visibleObserver.disconnect(); document.removeEventListener("visibilitychange", onVisibility); };
+    return () => { if (warmTimer !== undefined) window.clearTimeout(warmTimer); warmObserver.disconnect(); visibleObserver.disconnect(); document.removeEventListener("visibilitychange", onVisibility); };
   }, []);
 
   const highlighted = Boolean(scanId && score !== undefined);
