@@ -1,30 +1,28 @@
 import type { Metadata } from "next";
-import { DM_Mono, Space_Grotesk } from "next/font/google";
+import { Bodoni_Moda } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
+import Navigation from "@/components/Navigation";
 
-const geometric = Space_Grotesk({ variable: "--font-geometric", subsets: ["latin"] });
-const instrument = DM_Mono({ variable: "--font-instrument", subsets: ["latin"], weight: ["400", "500"] });
+const bodoni = Bodoni_Moda({ variable: "--font-display", subsets: ["latin"], weight: ["800"] });
 
 export const metadata: Metadata = {
   title: { default: "Vitals — SEO Audit Tool", template: "%s | Vitals" },
-  description: "A calm, calibrated first-pass SEO audit instrument.",
+  description: "A clear first look at your site's Web Vitals and SEO signals.",
   icons: { icon: "/favicon.ico" },
 };
 
-import Navigation from "@/components/Navigation";
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geometric.variable} ${instrument.variable}`}>
+    <html lang="en" className={bodoni.variable}>
       <body className="min-h-screen flex flex-col">
-        <Suspense fallback={<nav className="vitals-nav sticky top-0 z-50" />}>
+        <Suspense fallback={<nav className="vitals-nav sticky top-0 z-50" aria-label="Main navigation" />}>
           <Navigation />
         </Suspense>
         <div className="flex-1 flex flex-col">{children}</div>
-        <footer className="border-t border-[#AEB4BA] bg-[#202226] py-5 text-center text-[9px] font-mono tracking-[.08em] text-[#858C92]">
-          <p>VITALS &mdash; A QUIET SEO INSTRUMENT FOR LOUDER SIGNALS.</p>
-          <p className="mt-2 normal-case tracking-normal">Earth model by Zoe XR via <a href="https://poly.pizza/m/3U-XAIY031u" className="underline underline-offset-2">Poly Pizza</a>, licensed under <a href="https://creativecommons.org/licenses/by/3.0/" className="underline underline-offset-2">CC BY 3.0</a>.</p>
+        <footer className="vitals-footer border-t py-5 text-center text-sm">
+          <p>Vitals — website signals, made easier to read.</p>
+          <p className="mt-2 text-xs">Earth model by Zoe XR via <a href="https://poly.pizza/m/3U-XAIY031u" className="underline underline-offset-2">Poly Pizza</a>, licensed under <a href="https://creativecommons.org/licenses/by/3.0/" className="underline underline-offset-2">CC BY 3.0</a>.</p>
         </footer>
       </body>
     </html>
