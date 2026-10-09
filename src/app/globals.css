@@ -49,6 +49,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .vitals-nav { height: 76px; color: white; background: var(--navy); }
 .vitals-nav-inner { height: 100%; max-width: 1440px; }
 .vitals-logo-mark { display: none; }
+.vitals-nav-inner > a { min-height: 44px; display: flex; align-items: center; }
 .vitals-logo-word { color: white; font-size: 16px; font-weight: 500; letter-spacing: .02em; }
 .vitals-logo-tag { display: none; }
 .vitals-nav-link { min-height: 44px; display: inline-flex; align-items: center; color: rgba(255,255,255,.9); font: inherit; font-size: 14px; letter-spacing: .08em; text-decoration: underline; text-underline-offset: 5px; transition: color 160ms ease; }
@@ -125,6 +126,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   transition: background-color 160ms ease, transform 160ms ease;
 }
 .hero-cta:hover { background: var(--navy-deep); transform: translateX(-50%) translateY(-2px); }
+.vitals-home button[type="button"] { min-height: 44px; }
 .hero-audit { position: relative; max-width: 1120px; margin: 0 auto; padding: 76px 24px 64px; scroll-margin-top: 20px; }
 .hero-audit::before { content: ""; position: absolute; inset: 0; z-index: -1; }
 .hero-audit h2 { margin: 0 0 12px; font-size: clamp(1.8rem, 4vw, 3rem); font-weight: 650; letter-spacing: -.04em; }
@@ -216,11 +218,11 @@ footer.vitals-footer a { color: white; }
 
 .about-page { min-height: 100vh; padding: clamp(36px,7vw,88px) 24px 80px; }
 .about-wrap { max-width: 960px; margin: 0 auto; }
-.about-page h1 { margin: 0 0 48px; color: var(--navy); font-family: var(--font-display), "Bodoni MT", "Times New Roman", serif; font-size: clamp(3rem, 8vw, 7rem); font-weight: 800; line-height: .9; letter-spacing: -.06em; }
+.about-page h1 { margin: 0 0 48px; color: var(--navy); font-size: clamp(3rem, 8vw, 7rem); font-weight: 750; line-height: .9; letter-spacing: -.06em; }
 .about-section { padding: 28px 0; border-top: 1px solid var(--line); }
 .about-section h2 { margin: 0 0 16px; font-size: clamp(1.35rem, 3vw, 1.8rem); letter-spacing: -.035em; }
 .about-section p, .about-section li { color: var(--muted); font-size: 15px; line-height: 1.7; }
-.about-section a { color: var(--navy); text-decoration: underline; text-underline-offset: 3px; }
+.about-section a { min-height: 44px; display: inline-flex; align-items: center; color: var(--navy); text-decoration: underline; text-underline-offset: 3px; }
 .about-steps { display: grid; gap: 20px; grid-template-columns: repeat(3,minmax(0,1fr)); padding: 0; list-style: none; }
 .about-steps li { border-left: 3px solid var(--olive); padding: 4px 0 4px 14px; }
 .about-steps strong { display: block; margin-bottom: 5px; color: var(--ink); }
@@ -235,12 +237,12 @@ footer.vitals-footer a { color: white; }
   .vitals-nav { height: 64px; }
   .vitals-nav-inner { padding-inline: 16px; }
   .vitals-logo-word { font-size: 14px; }
-  .vitals-nav-link { padding-inline: 7px; font-size: 11px; letter-spacing: .03em; }
+  .vitals-nav-link { padding-inline: 8px; font-size: 11px; letter-spacing: .03em; }
   .vitals-nav-inner > div { gap: 0; }
   .vitals-home .vitals-hero { height: max(640px, calc(100svh - 64px)); min-height: 640px; }
   .vitals-hero::before { inset: 57% -3% -3%; }
   .hero-copy h1 { top: 58px; width: 98vw; font-size: clamp(3.05rem, 12.1vw, 5.1rem); line-height: .86; letter-spacing: -.082em; }
-  .hero-globe { inset: auto 0 -24%; }
+  .hero-globe { inset: auto 0 -3%; }
   .hero-globe .globe-instrument { width: min(112vw, 620px); }
   .hero-globe .globe-panel { aspect-ratio: 1; }
   .hero-cta { bottom: 8%; width: calc(100% - 40px); min-height: 52px; font-size: 18px; }
