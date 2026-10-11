@@ -16,219 +16,226 @@ export async function runScanPipeline(scanId: string, url: string, strategy: "mo
   const timings: ScanTimings = {};
 
   try {
-    // ══════════════════════════════════════════════════════════════════
-    // PHASE 1: DIRECT HTML QUICK CHECKS (~2s)
-    // ══════════════════════════════════════════════════════════════════
-    const phase1Start = Date.now();
-    let quickChecks: QuickChecks | null = null;
+    // Run Phase 1 (direct HTML/meta fetch) and Phase 2 (PageSpeed) in parallel
+    const runPhase1 = async (): Promise<QuickChecks | null> => {
+      const phase1Start = Date.now();
+      let quickChecks: QuickChecks | null = null;
 
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
 
-      const response = await fetch(url, {
-        signal: controller.signal,
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (compatible; VitalsBot/1.0; +https://vitals.dev)",
-          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        },
-      });
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        const html = await response.text();
-        const $ = cheerio.load(html);
-
-        const title = $("title").text().trim() || null;
-        const description =
-          $('meta[name="description"]').attr("content")?.trim() ||
-          $('meta[property="og:description"]').attr("content")?.trim() ||
-          null;
-        const h1Elements = $("h1");
-        const h1 = h1Elements.first().text().trim() || null;
-        const h1Count = h1Elements.length;
-        const canonical = $('link[rel="canonical"]').attr("href")?.trim() || null;
-        const robots = $('meta[name="robots"]').attr("content")?.trim() || null;
-
-        const imgs = $("img");
-        let withAlt = 0;
-        imgs.each((_, el) => {
-          const alt = $(el).attr("alt");
-          if (alt && alt.trim().length > 0) withAlt++;
-        });
-        const totalImgs = imgs.length;
-
-        quickChecks = {
-          title,
-          description,
-          h1,
-          h1Count,
-          canonical,
-          robots,
-          imageAlt: {
-            total: totalImgs,
-            withAlt,
-            missingAlt: totalImgs - withAlt,
-            percent: totalImgs === 0 ? 100 : Math.round((withAlt / totalImgs) * 100),
+        const response = await fetch(url, {
+          signal: controller.signal,
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (compatible; VitalsBot/1.0; +https://vitals.dev)",
+            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
           },
-        };
+        });
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const html = await response.text();
+          const $ = cheerio.load(html);
+
+          const title = $("title").text().trim() || null;
+          const description =
+            $('meta[name="description"]').attr("content")?.trim() ||
+            $('meta[property="og:description"]').attr("content")?.trim() ||
+            null;
+          const h1Elements = $("h1");
+          const h1 = h1Elements.first().text().trim() || null;
+          const h1Count = h1Elements.length;
+          const canonical = $('link[rel="canonical"]').attr("href")?.trim() || null;
+          const robots = $('meta[name="robots"]').attr("content")?.trim() || null;
+
+          const imgs = $("img");
+          let withAlt = 0;
+          imgs.each((_, el) => {
+            const alt = $(el).attr("alt");
+            if (alt && alt.trim().length > 0) withAlt++;
+          });
+          const totalImgs = imgs.length;
+
+          quickChecks = {
+            title,
+            description,
+            h1,
+            h1Count,
+            canonical,
+            robots,
+            imageAlt: {
+              total: totalImgs,
+              withAlt,
+              missingAlt: totalImgs - withAlt,
+              percent: totalImgs === 0 ? 100 : Math.round((withAlt / totalImgs) * 100),
+            },
+          };
+        }
+      } catch (phase1Err) {
+        console.warn("Phase 1 direct HTML fetch warning:", phase1Err);
       }
-    } catch (phase1Err) {
-      console.warn("Phase 1 direct HTML fetch warning:", phase1Err);
-      // Non-fatal: if direct HTML fails, continue to PSI
-    }
 
-    timings.phase1Ms = Date.now() - phase1Start;
+      timings.phase1Ms = Date.now() - phase1Start;
 
-    // Save Phase 1 progress to Supabase immediately so client renders quick checks
+      // Save Phase 1 progress to Supabase immediately so client renders quick checks while PSI runs
+      await updateScan(scanId, {
+        status: "running",
+        quick_checks: quickChecks,
+        timings,
+      });
+
+      return quickChecks;
+    };
+
+    const runPhase2 = async () => {
+      const phase2Start = Date.now();
+
+      const apiKey = process.env.VITALS_PAGESPEED_API_KEY;
+      if (!apiKey) {
+        throw new Error("PageSpeed API key is not configured. Set VITALS_PAGESPEED_API_KEY in your environment.");
+      }
+
+      const params = new URLSearchParams();
+      params.set("url", url);
+      params.set("strategy", strategy);
+      params.set("key", apiKey);
+      params.append("category", "performance");
+      params.append("category", "accessibility");
+      params.append("category", "best-practices");
+      params.append("category", "seo");
+
+      const psiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?${params.toString()}`;
+
+      let psiRes: Response;
+      try {
+        psiRes = await fetch(psiUrl, {
+          signal: AbortSignal.timeout(45000),
+          headers: { Accept: "application/json" },
+        });
+      } catch (fetchErr: unknown) {
+        if (fetchErr instanceof Error && fetchErr.name === "TimeoutError") {
+          throw new Error("The scan timed out after 45 seconds. Try again.");
+        }
+        throw fetchErr;
+      }
+
+      if (!psiRes.ok) {
+        if (psiRes.status === 429) {
+          throw new Error("Google PageSpeed is rate limiting requests. Try again in a minute.");
+        }
+        let reason = psiRes.statusText;
+        try {
+          const errorJson = (await psiRes.json()) as { error?: { message?: string } };
+          if (errorJson?.error?.message) {
+            reason = errorJson.error.message;
+          }
+        } catch {
+          // ignore JSON parse error
+        }
+        throw new Error(`Google PageSpeed API failed with status ${psiRes.status}: ${reason || "Unknown error"}`);
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = (await psiRes.json()) as any;
+      const categories = data?.lighthouseResult?.categories;
+
+      if (!categories) {
+        throw new Error("Google PageSpeed response is missing Lighthouse categories. Scan failed.");
+      }
+
+      const perfScore = categories.performance?.score;
+      const a11yScore = categories.accessibility?.score;
+      const bpScore = categories["best-practices"]?.score;
+      const seoScore = categories.seo?.score;
+
+      if (
+        typeof perfScore !== "number" ||
+        typeof a11yScore !== "number" ||
+        typeof bpScore !== "number" ||
+        typeof seoScore !== "number"
+      ) {
+        throw new Error("Google PageSpeed response is missing one or more required category scores (performance, accessibility, best-practices, seo).");
+      }
+
+      const scores = {
+        performance: Math.round(perfScore * 100),
+        accessibility: Math.round(a11yScore * 100),
+        bestPractices: Math.round(bpScore * 100),
+        seo: Math.round(seoScore * 100),
+      };
+
+      const audits = (data.lighthouseResult?.audits || {}) as Record<string, AuditEntry>;
+
+      const keyMetrics = {
+        fcp: audits["first-contentful-paint"]?.displayValue || null,
+        lcp: audits["largest-contentful-paint"]?.displayValue || null,
+        cls: audits["cumulative-layout-shift"]?.displayValue || null,
+        tbt: audits["total-blocking-time"]?.displayValue || null,
+        speedIndex: audits["speed-index"]?.displayValue || null,
+        interactive: audits["interactive"]?.displayValue || null,
+      };
+
+      const failingAudits = Object.values(audits)
+        .filter((a): a is AuditEntry & { id: string; title: string; score: number } =>
+          Boolean(a && a.id && a.title && a.score !== null && a.score !== undefined && a.score < 1)
+        )
+        .map((a) => ({
+          id: a.id,
+          title: a.title,
+          description: a.description || "",
+          score: a.score,
+          displayValue: a.displayValue || null,
+        }))
+        .slice(0, 20);
+
+      const rawCategoriesPayload = {
+        categories: data.lighthouseResult?.categories || {},
+        keyMetrics,
+        failingAudits,
+      };
+
+      timings.phase2Ms = Date.now() - phase2Start;
+
+      return {
+        scores,
+        keyMetrics,
+        failingAudits,
+        rawCategoriesPayload,
+      };
+    };
+
+    // Run Phase 1 and Phase 2 in parallel
+    const [quickChecks, phase2Data] = await Promise.all([runPhase1(), runPhase2()]);
+
+    timings.totalMs = Date.now() - startTime;
+
+    // Mark scan status "done" immediately as soon as the four scores are saved!
     await updateScan(scanId, {
-      status: "running",
+      status: "done",
+      score_performance: phase2Data.scores.performance,
+      score_accessibility: phase2Data.scores.accessibility,
+      score_best_practices: phase2Data.scores.bestPractices,
+      score_seo: phase2Data.scores.seo,
+      raw_categories: phase2Data.rawCategoriesPayload,
       quick_checks: quickChecks,
       timings,
     });
 
-    // ══════════════════════════════════════════════════════════════════
-    // PHASE 2: GOOGLE PAGESPEED INSIGHTS (PSI)
-    // ══════════════════════════════════════════════════════════════════
-    const phase2Start = Date.now();
-
-    const apiKey = process.env.VITALS_PAGESPEED_API_KEY;
-    if (!apiKey) {
-      throw new Error("PageSpeed API key is not configured. Set VITALS_PAGESPEED_API_KEY in your environment.");
-    }
-
-    const params = new URLSearchParams();
-    params.set("url", url);
-    params.set("strategy", strategy);
-    params.set("key", apiKey);
-    params.append("category", "performance");
-    params.append("category", "accessibility");
-    params.append("category", "best-practices");
-    params.append("category", "seo");
-
-    const psiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?${params.toString()}`;
-
-    let psiRes: Response;
+    // Run Gemini summary AFTER marking done, in the same after() callback, with its own 15-second timeout
     try {
-      psiRes = await fetch(psiUrl, {
-        signal: AbortSignal.timeout(45000),
-        headers: { Accept: "application/json" },
-      });
-    } catch (fetchErr: unknown) {
-      if (fetchErr instanceof Error && fetchErr.name === "TimeoutError") {
-        throw new Error("The scan timed out after 45 seconds. Try again.");
-      }
-      throw fetchErr;
-    }
-
-    if (!psiRes.ok) {
-      if (psiRes.status === 429) {
-        throw new Error("Google PageSpeed is rate limiting requests. Try again in a minute.");
-      }
-      let reason = psiRes.statusText;
-      try {
-        const errorJson = (await psiRes.json()) as { error?: { message?: string } };
-        if (errorJson?.error?.message) {
-          reason = errorJson.error.message;
-        }
-      } catch {
-        // ignore JSON parse error
-      }
-      throw new Error(`Google PageSpeed API failed with status ${psiRes.status}: ${reason || "Unknown error"}`);
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = (await psiRes.json()) as any;
-    const categories = data?.lighthouseResult?.categories;
-
-    if (!categories) {
-      throw new Error("Google PageSpeed response is missing Lighthouse categories. Scan failed.");
-    }
-
-    const perfScore = categories.performance?.score;
-    const a11yScore = categories.accessibility?.score;
-    const bpScore = categories["best-practices"]?.score;
-    const seoScore = categories.seo?.score;
-
-    if (
-      typeof perfScore !== "number" ||
-      typeof a11yScore !== "number" ||
-      typeof bpScore !== "number" ||
-      typeof seoScore !== "number"
-    ) {
-      throw new Error("Google PageSpeed response is missing one or more required category scores (performance, accessibility, best-practices, seo).");
-    }
-
-    const scores = {
-      performance: Math.round(perfScore * 100),
-      accessibility: Math.round(a11yScore * 100),
-      bestPractices: Math.round(bpScore * 100),
-      seo: Math.round(seoScore * 100),
-    };
-
-    const audits = (data.lighthouseResult?.audits || {}) as Record<string, AuditEntry>;
-
-    // Extract key Core Web Vitals metrics
-    const keyMetrics = {
-      fcp: audits["first-contentful-paint"]?.displayValue || null,
-      lcp: audits["largest-contentful-paint"]?.displayValue || null,
-      cls: audits["cumulative-layout-shift"]?.displayValue || null,
-      tbt: audits["total-blocking-time"]?.displayValue || null,
-      speedIndex: audits["speed-index"]?.displayValue || null,
-      interactive: audits["interactive"]?.displayValue || null,
-    };
-
-    // Extract trimmed failing audits
-    const failingAudits = Object.values(audits)
-      .filter((a): a is AuditEntry & { id: string; title: string; score: number } =>
-        Boolean(a && a.id && a.title && a.score !== null && a.score !== undefined && a.score < 1)
-      )
-      .map((a) => ({
-        id: a.id,
-        title: a.title,
-        description: a.description || "",
-        score: a.score,
-        displayValue: a.displayValue || null,
-      }))
-      .slice(0, 20); // Trim to top 20 failing audits to keep row light
-
-    const rawCategoriesPayload = {
-      categories: data.lighthouseResult?.categories || {},
-      keyMetrics,
-      failingAudits,
-    };
-
-    timings.phase2Ms = Date.now() - phase2Start;
-
-    // Update scan with scores & PSI results immediately
-    await updateScan(scanId, {
-      score_performance: scores.performance,
-      score_accessibility: scores.accessibility,
-      score_best_practices: scores.bestPractices,
-      score_seo: scores.seo,
-      raw_categories: rawCategoriesPayload,
-      timings,
-    });
-
-    // ══════════════════════════════════════════════════════════════════
-    // PHASE 3: GEMINI AI SUMMARY (Non-blocking background generation)
-    // ══════════════════════════════════════════════════════════════════
-    const phase3Start = Date.now();
-    let summaryText: string | null = null;
-
-    try {
-      const topFailing = failingAudits.slice(0, 6).map(
+      const topFailing = phase2Data.failingAudits.slice(0, 6).map(
         (a) => `- ${a.title}: ${a.displayValue || ""} (${a.description.replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1")})`
       ).join("\n");
 
       const prompt = `You are an expert SEO and web performance consultant. Summarize this audit for ${url} in a concise, structured markdown readout.
 
 Scores (0-100):
-- Performance: ${scores.performance}/100 (FCP: ${keyMetrics.fcp || "N/A"}, LCP: ${keyMetrics.lcp || "N/A"}, CLS: ${keyMetrics.cls || "N/A"}, TBT: ${keyMetrics.tbt || "N/A"})
-- SEO: ${scores.seo}/100
-- Accessibility: ${scores.accessibility}/100
-- Best Practices: ${scores.bestPractices}/100
+- Performance: ${phase2Data.scores.performance}/100 (FCP: ${phase2Data.keyMetrics.fcp || "N/A"}, LCP: ${phase2Data.keyMetrics.lcp || "N/A"}, CLS: ${phase2Data.keyMetrics.cls || "N/A"}, TBT: ${phase2Data.keyMetrics.tbt || "N/A"})
+- SEO: ${phase2Data.scores.seo}/100
+- Accessibility: ${phase2Data.scores.accessibility}/100
+- Best Practices: ${phase2Data.scores.bestPractices}/100
 
 Quick Checks:
 - Title: ${quickChecks?.title || "Missing"}
@@ -247,28 +254,25 @@ Provide:
 
 Keep the summary clear, professional, and under 250 words.`;
 
-      const { text } = await generateText({
+      const geminiTimeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Gemini summary timed out after 15s")), 15000)
+      );
+
+      const geminiPromise = generateText({
         model: geminiFlash,
         prompt,
       });
 
-      summaryText = text;
-    } catch (phase3Err) {
-      console.warn("Phase 3 AI summary generation error:", phase3Err);
-      summaryText = "AI summary generation was skipped or encountered a temporary issue. You can ask specific questions in the Assistant tab.";
+      const { text } = await Promise.race([geminiPromise, geminiTimeout]);
+      if (text) {
+        await updateScan(scanId, {
+          summary: text,
+        });
+      }
+    } catch (geminiError) {
+      console.error("Gemini summary generation failed or timed out:", geminiError);
+      // Ignore failure, leave summary empty
     }
-
-    timings.phase3Ms = Date.now() - phase3Start;
-    timings.totalMs = Date.now() - startTime;
-
-    // Mark scan as DONE with summary and complete timings
-    await updateScan(scanId, {
-      status: "done",
-      summary: summaryText,
-      timings,
-    });
-
-    console.log(`Scan ${scanId} completed in ${timings.totalMs}ms (Phase 1: ${timings.phase1Ms}ms, Phase 2: ${timings.phase2Ms}ms, Phase 3: ${timings.phase3Ms}ms)`);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Audit processing failed.";
     console.error(`Scan ${scanId} failed:`, errorMessage);

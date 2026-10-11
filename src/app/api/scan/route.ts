@@ -137,14 +137,10 @@ export async function GET(req: Request) {
     return NextResponse.json({ scans: [] });
   }
 
-  const scans = [];
+  let scans: NonNullable<Awaited<ReturnType<typeof getScanById>>>[] = [];
   try {
-    for (const id of ids) {
-      if (id) {
-        const scan = await getScanById(id);
-        if (scan) scans.push(scan);
-      }
-    }
+    const results = await Promise.all(ids.map((id) => getScanById(id)));
+    scans = results.filter((s): s is NonNullable<typeof s> => Boolean(s));
   } catch (error) {
     console.error("Could not restore requested scans", error);
   }

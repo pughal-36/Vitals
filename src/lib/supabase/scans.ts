@@ -59,10 +59,33 @@ export async function findRecentScan(
       .eq("strategy", strategy)
       .gte("created_at", cutoff)
       .order("created_at", { ascending: false })
-      .limit(1);
+      .limit(10);
 
     if (error || !data || data.length === 0) return null;
-    return data[0] as ScanRow;
+
+    for (const rawRow of data) {
+      const row = rawRow as ScanRow;
+      const p = row.score_performance;
+      const a = row.score_accessibility;
+      const bp = row.score_best_practices;
+      const s = row.score_seo;
+
+      // Must have all four scores as numbers
+      if (
+        typeof p === "number" &&
+        typeof a === "number" &&
+        typeof bp === "number" &&
+        typeof s === "number"
+      ) {
+        // Must NOT return rows where accessibility, best_practices and seo are all 0 (old bad rows)
+        if (a === 0 && bp === 0 && s === 0) {
+          continue;
+        }
+        return row;
+      }
+    }
+
+    return null;
   } catch (error) {
     console.error("Error finding recent scan:", error);
     return null;
