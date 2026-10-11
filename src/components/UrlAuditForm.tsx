@@ -127,7 +127,7 @@ function ScoreCards({
   ];
 
   return (
-    <div className="score-list mb-6" aria-label="Lighthouse category scores">
+    <div className="score-list mb-6" role="region" aria-label="Lighthouse category scores">
       {categories.map(({ label, key, score }) => {
         const isScoreLoaded = score !== null && score !== undefined && !loading;
         const value = isScoreLoaded ? Math.max(0, Math.min(100, score ?? 0)) : 0;
@@ -341,6 +341,9 @@ export default function UrlAuditForm({ initialScan }: { initialScan?: ScanRow })
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
+            <label htmlFor="audit-url-input" className="sr-only">
+              Website URL to audit
+            </label>
             <input
               ref={inputRef}
               id="audit-url-input"
@@ -365,6 +368,7 @@ export default function UrlAuditForm({ initialScan }: { initialScan?: ScanRow })
             id="audit-submit-btn"
             disabled={isLoading}
             aria-busy={isLoading}
+            aria-label={isLoading ? "Auditing website, please wait" : "Run audit scan"}
             className="px-5 py-3 rounded-xl bg-primary text-white text-sm font-semibold hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity flex items-center gap-2"
           >
             {isLoading && (

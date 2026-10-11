@@ -51,16 +51,19 @@ export default function RecentScans() {
               </span>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 text-xs">
-                <span className="text-accent">{scan.score_performance}</span>
-                <span className="text-muted">|</span>
-                <span className="text-warning">{scan.score_accessibility}</span>
-                <span className="text-muted">|</span>
-                <span className="text-danger">{scan.score_best_practices}</span>
-                <span className="text-muted">|</span>
-                <span className="text-accent">{scan.score_seo}</span>
+              <div
+                className="flex items-center gap-1 text-xs"
+                aria-label={`Scores: Performance ${scan.score_performance ?? "pending"}, Accessibility ${scan.score_accessibility ?? "pending"}, Best Practices ${scan.score_best_practices ?? "pending"}, SEO ${scan.score_seo ?? "pending"}`}
+              >
+                <span className="text-accent" title="Performance"><span className="sr-only">Performance: </span>{scan.score_performance ?? "—"}</span>
+                <span className="text-muted" aria-hidden="true">|</span>
+                <span className="text-warning" title="Accessibility"><span className="sr-only">Accessibility: </span>{scan.score_accessibility ?? "—"}</span>
+                <span className="text-muted" aria-hidden="true">|</span>
+                <span className="text-danger" title="Best Practices"><span className="sr-only">Best Practices: </span>{scan.score_best_practices ?? "—"}</span>
+                <span className="text-muted" aria-hidden="true">|</span>
+                <span className="text-accent" title="SEO"><span className="sr-only">SEO: </span>{scan.score_seo ?? "—"}</span>
               </div>
-              <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
             </div>
