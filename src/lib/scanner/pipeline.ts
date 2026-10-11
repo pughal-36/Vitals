@@ -1,5 +1,4 @@
 import * as cheerio from "cheerio";
-import psi from "psi";
 import { generateText } from "ai";
 import { geminiFlash } from "@/lib/gemini/model";
 import { updateScan, type QuickChecks, type ScanTimings } from "@/lib/supabase/scans";
@@ -94,25 +93,78 @@ export async function runScanPipeline(scanId: string, url: string, strategy: "mo
     // ══════════════════════════════════════════════════════════════════
     const phase2Start = Date.now();
 
-    // Call PSI with timeout
-    const psiPromise = psi(url, {
-      key: process.env.VITALS_PAGESPEED_API_KEY,
-      strategy,
-    });
+    const apiKey = process.env.VITALS_PAGESPEED_API_KEY;
+    if (!apiKey) {
+      throw new Error("PageSpeed API key is not configured. Set VITALS_PAGESPEED_API_KEY in your environment.");
+    }
 
-    // 35s max timeout for PSI
-    const psiTimeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Google PageSpeed Insights API timed out after 35s.")), 35000)
-    );
+    const params = new URLSearchParams();
+    params.set("url", url);
+    params.set("strategy", strategy);
+    params.set("key", apiKey);
+    params.append("category", "performance");
+    params.append("category", "accessibility");
+    params.append("category", "best-practices");
+    params.append("category", "seo");
 
-    const { data } = await Promise.race([psiPromise, psiTimeout]);
+    const psiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?${params.toString()}`;
 
-    const categories = data.lighthouseResult?.categories;
+    let psiRes: Response;
+    try {
+      psiRes = await fetch(psiUrl, {
+        signal: AbortSignal.timeout(45000),
+        headers: { Accept: "application/json" },
+      });
+    } catch (fetchErr: unknown) {
+      if (fetchErr instanceof Error && fetchErr.name === "TimeoutError") {
+        throw new Error("The scan timed out after 45 seconds. Try again.");
+      }
+      throw fetchErr;
+    }
+
+    if (!psiRes.ok) {
+      if (psiRes.status === 429) {
+        throw new Error("Google PageSpeed is rate limiting requests. Try again in a minute.");
+      }
+      let reason = psiRes.statusText;
+      try {
+        const errorJson = (await psiRes.json()) as { error?: { message?: string } };
+        if (errorJson?.error?.message) {
+          reason = errorJson.error.message;
+        }
+      } catch {
+        // ignore JSON parse error
+      }
+      throw new Error(`Google PageSpeed API failed with status ${psiRes.status}: ${reason || "Unknown error"}`);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = (await psiRes.json()) as any;
+    const categories = data?.lighthouseResult?.categories;
+
+    if (!categories) {
+      throw new Error("Google PageSpeed response is missing Lighthouse categories. Scan failed.");
+    }
+
+    const perfScore = categories.performance?.score;
+    const a11yScore = categories.accessibility?.score;
+    const bpScore = categories["best-practices"]?.score;
+    const seoScore = categories.seo?.score;
+
+    if (
+      typeof perfScore !== "number" ||
+      typeof a11yScore !== "number" ||
+      typeof bpScore !== "number" ||
+      typeof seoScore !== "number"
+    ) {
+      throw new Error("Google PageSpeed response is missing one or more required category scores (performance, accessibility, best-practices, seo).");
+    }
+
     const scores = {
-      performance: Math.round((categories?.performance?.score ?? 0) * 100),
-      accessibility: Math.round((categories?.accessibility?.score ?? 0) * 100),
-      bestPractices: Math.round((categories?.["best-practices"]?.score ?? 0) * 100),
-      seo: Math.round((categories?.seo?.score ?? 0) * 100),
+      performance: Math.round(perfScore * 100),
+      accessibility: Math.round(a11yScore * 100),
+      bestPractices: Math.round(bpScore * 100),
+      seo: Math.round(seoScore * 100),
     };
 
     const audits = (data.lighthouseResult?.audits || {}) as Record<string, AuditEntry>;

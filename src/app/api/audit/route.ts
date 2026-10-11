@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import psi from "psi";
 import { saveScan } from "@/lib/supabase/scans";
 
 export interface AuditSuccess {
@@ -54,12 +53,40 @@ export async function POST(req: Request) {
     rawStrategy === "desktop" ? "desktop" : "mobile";
 
   try {
-    // VITALS_PAGESPEED_API_KEY is a server-only env var — never exposed to the browser.
-    const { data } = await psi(url, {
-      key: process.env.VITALS_PAGESPEED_API_KEY,
-      strategy: resolvedStrategy,
-    });
+    const apiKey = process.env.VITALS_PAGESPEED_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { ok: false, error: "PageSpeed API key is not configured.", fetchedAt: new Date().toISOString() },
+        { status: 500 }
+      );
+    }
 
+    const params = new URLSearchParams();
+    params.set("url", url);
+    params.set("strategy", resolvedStrategy);
+    params.set("key", apiKey);
+    params.append("category", "performance");
+    params.append("category", "accessibility");
+    params.append("category", "best-practices");
+    params.append("category", "seo");
+
+    const psiRes = await fetch(
+      `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?${params.toString()}`,
+      {
+        signal: AbortSignal.timeout(45000),
+        headers: { Accept: "application/json" },
+      }
+    );
+
+    if (!psiRes.ok) {
+      return NextResponse.json(
+        { ok: false, error: `PageSpeed API error: ${psiRes.statusText}`, fetchedAt: new Date().toISOString() },
+        { status: psiRes.status }
+      );
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = (await psiRes.json()) as any;
     const categories = data.lighthouseResult?.categories;
     const scores = {
       performance: Math.round((categories?.performance?.score ?? 0) * 100),
