@@ -1,90 +1,49 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
-const fallbackTips = [
-  "A useful page title tells people what the page is about before they open it.",
-  "Write a distinct title for each important page; repeated titles make pages harder to tell apart.",
-  "A concise meta description can help searchers decide whether a result fits their needs.",
-  "Search engines may create a snippet from page content instead of using your meta description.",
-  "Describe an image's purpose in its alt text; decorative images can use empty alt text.",
-  "Clear heading levels help readers scan a page and understand its structure.",
-  "Keep the main heading focused on the page's actual topic.",
-  "Compress large images and serve appropriately sized versions to reduce page weight.",
-  "Slow loading can frustrate visitors, especially on mobile connections.",
-  "Test key pages on a phone-sized screen as well as on desktop.",
-  "Make sure important text and controls remain readable at narrow widths.",
-  "A descriptive link label tells people where a link will take them.",
-  "Use a canonical URL when the same or very similar content is reachable at multiple URLs.",
-  "A sitemap can help search engines discover URLs; it does not guarantee indexing.",
-  "Check that important pages can be reached through links on your site.",
+export const LOADING_TIPS = [
+  "Every page should have one h1 heading.",
+  "Add alt text to images that carry meaning.",
+  "Use width and height attributes on images to avoid layout shift.",
+  "Keep page titles unique and descriptive across your site.",
+  "Provide meta descriptions that accurately summarize page content.",
+  "Use semantic HTML elements like main, nav, and article for structure.",
+  "Ensure color contrast between text and background meets accessibility guidelines.",
+  "Compress images and use modern formats like WebP or AVIF.",
+  "Avoid blocking the main thread with heavy JavaScript execution.",
+  "Set descriptive text on link elements instead of click here.",
+  "Use canonical tags when similar content exists on multiple URLs.",
+  "Ensure interactive elements can be focused and operated with a keyboard.",
+  "Keep server response times fast to improve Largest Contentful Paint.",
+  "Minimize third-party scripts that slow down page loading.",
+  "Include viewport meta tags so pages display properly on mobile devices.",
+  "Specify a language attribute on the html element for screen readers.",
+  "Preconnect to required external origins to reduce connection latency.",
+  "Keep cumulative layout shifts low by reserving space for dynamic content.",
+  "Use robots.txt to keep crawlers away from private or duplicate sections.",
+  "Test pages on real mobile connections to spot performance bottlenecks.",
 ];
-const KEY = "vitals.seoTips.seen.v1";
 
 export default function SeoLoadingTips() {
-  const [tip, setTip] = useState("");
-  const seen = useRef<Set<string>>(new Set());
-  const queued = useRef<string[]>([]);
-  const fetching = useRef(false);
-  const shownOnce = useRef(false);
-
-  const getSeen = useCallback(() => {
-    if (seen.current.size || typeof window === "undefined") return;
-    try { seen.current = new Set(JSON.parse(sessionStorage.getItem(KEY) || "[]")); } catch { seen.current = new Set(); }
-  }, []);
-
-  const addBatch = useCallback(async () => {
-    if (fetching.current) return;
-    fetching.current = true;
-    try {
-      const response = await fetch("/api/tips", { cache: "no-store" });
-      if (!response.ok) throw new Error("Tip service unavailable");
-      const data = await response.json() as { tips?: string[] };
-      const existing = new Set(queued.current);
-      const fresh = (data.tips || []).map((value) => value.trim()).filter((value) => value && !seen.current.has(value) && !existing.has(value));
-      queued.current.push(...fresh);
-      if (!fresh.length) throw new Error("No fresh tips returned");
-    } catch {
-      const fresh = fallbackTips.filter((value) => !seen.current.has(value) && !queued.current.includes(value));
-      queued.current.push(...fresh);
-    } finally {
-      fetching.current = false;
-    }
-  }, []);
+  const [index, setIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    getSeen();
-    let mounted = true;
-    const initial = addBatch();
-    const slowFallback = window.setTimeout(() => {
-      if (mounted && !shownOnce.current) {
-        const first = fallbackTips.find((value) => !seen.current.has(value));
-        if (first) {
-          seen.current.add(first);
-          try { sessionStorage.setItem(KEY, JSON.stringify([...seen.current])); } catch { /* storage is optional */ }
-          setTip(first);
-          shownOnce.current = true;
-        }
-      }
-    }, 3200);
-    void initial.then(() => { if (mounted && queued.current.length && !shownOnce.current) advance(); });
-    function advance() {
-      getSeen();
-      let next: string | undefined;
-      while (queued.current.length && !next) {
-        const candidate = queued.current.shift()!;
-        if (!seen.current.has(candidate)) next = candidate;
-      }
-      if (!next) { void addBatch(); return; }
-      seen.current.add(next);
-      shownOnce.current = true;
-      try { sessionStorage.setItem(KEY, JSON.stringify([...seen.current])); } catch { /* storage is optional */ }
-      setTip(next);
-      if (queued.current.length <= 2) void addBatch();
-    }
-    const timer = window.setInterval(advance, 5200);
-    return () => { mounted = false; window.clearTimeout(slowFallback); window.clearInterval(timer); };
-  }, [addBatch, getSeen]);
+    const start = Math.floor(Math.random() * LOADING_TIPS.length);
+    setIndex(start);
 
-  return <p className="seo-tip" aria-live="polite" aria-atomic="true"><span key={tip} className="seo-tip-copy">{tip || "Loading tips..."}</span></p>;
+    const interval = window.setInterval(() => {
+      setIndex((prev) => (prev === null ? start : (prev + 1) % LOADING_TIPS.length));
+    }, 6000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const tip = index !== null ? LOADING_TIPS[index] : "";
+
+  return (
+    <p className="seo-tip" aria-live="polite" aria-atomic="true">
+      <span className="seo-tip-copy">{tip}</span>
+    </p>
+  );
 }

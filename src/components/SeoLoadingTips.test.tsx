@@ -1,52 +1,56 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import SeoLoadingTips from './SeoLoadingTips';
+import { render, screen, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import SeoLoadingTips, { LOADING_TIPS } from './SeoLoadingTips';
 
 describe('SeoLoadingTips Component', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    sessionStorage.clear();
+    vi.useFakeTimers();
   });
 
-  it('renders initial loading state', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('renders aria attributes and shows a tip from the list after mounting', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
     render(<SeoLoadingTips />);
 
-    expect(screen.getByRole('paragraph')).toHaveAttribute('aria-live', 'polite');
-    expect(screen.getByRole('paragraph')).toHaveTextContent(/Loading tips/i);
+    const paragraph = screen.getByRole('paragraph');
+    expect(paragraph).toHaveAttribute('aria-live', 'polite');
+    expect(paragraph).toHaveAttribute('aria-atomic', 'true');
+    expect(paragraph).toHaveTextContent(LOADING_TIPS[0]);
   });
 
-  it('fetches fresh tips from /api/tips and displays them', async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        tips: [
-          'Fast pages give both people and crawlers fewer reasons to leave.',
-          'A clear title helps searchers know what makes a page useful.',
-        ],
-        topic: 'page speed and Core Web Vitals',
-      }),
+  it('rotates to the next tip every 6 seconds in order', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.1); // Math.floor(0.1 * 20) = 2
+    render(<SeoLoadingTips />);
+
+    expect(screen.getByRole('paragraph')).toHaveTextContent(LOADING_TIPS[2]);
+
+    act(() => {
+      vi.advanceTimersByTime(6000);
     });
 
-    render(<SeoLoadingTips />);
+    expect(screen.getByRole('paragraph')).toHaveTextContent(LOADING_TIPS[3]);
 
-    await waitFor(() => {
-      expect(
-        screen.getByText(/Fast pages give both people and crawlers/i)
-      ).toBeVisible();
+    act(() => {
+      vi.advanceTimersByTime(6000);
     });
+
+    expect(screen.getByRole('paragraph')).toHaveTextContent(LOADING_TIPS[4]);
   });
 
-  it('falls back to static tips pool if API request fails', async () => {
-    global.fetch = vi.fn().mockRejectedValueOnce(new Error('Network error'));
-
+  it('wraps around to the first tip when reaching the end of the array', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.999); // last index (19)
     render(<SeoLoadingTips />);
 
-    await waitFor(
-      () => {
-        const p = screen.getByRole('paragraph');
-        expect(p.textContent).toBeTruthy();
-      },
-      { timeout: 4000 }
-    );
+    expect(screen.getByRole('paragraph')).toHaveTextContent(LOADING_TIPS[19]);
+
+    act(() => {
+      vi.advanceTimersByTime(6000);
+    });
+
+    expect(screen.getByRole('paragraph')).toHaveTextContent(LOADING_TIPS[0]);
   });
 });
