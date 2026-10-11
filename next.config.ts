@@ -1,7 +1,17 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  experimental: {
+    optimizePackageImports: [
+      "@ai-sdk/react",
+      "ai",
+      "react-markdown",
+      "remark-gfm",
+      "three",
+      "@react-three/fiber",
+      "@react-three/drei",
+    ],
+  },
 };
 
 export default nextConfig;

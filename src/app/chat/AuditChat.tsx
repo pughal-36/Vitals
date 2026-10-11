@@ -24,6 +24,8 @@ import { useState, useRef, useEffect, useCallback, type FormEvent } from "react"
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+const REMARK_PLUGINS = [remarkGfm];
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function FetchMetaTagsUI({ part }: { part: any }) {
   const url = part.input?.url || "url";
@@ -383,7 +385,7 @@ export default function AuditChat({
                       if (part.type === "text" && part.text) {
                         return (
                           <div key={partIdx} className="prose prose-invert prose-sm max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            <ReactMarkdown remarkPlugins={REMARK_PLUGINS}>
                               {part.text.replace(/<chips>[\s\S]*?<\/chips>/g, "")}
                             </ReactMarkdown>
                             {/* Streaming/typing indicator — blinking cursor while tokens arrive */}

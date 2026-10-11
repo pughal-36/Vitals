@@ -8,12 +8,13 @@ import type { UIMessage } from "ai";
 
 export default async function AssistantPage({ params }: { params: Promise<{ scanId: string }> }) {
   const { scanId } = await params;
-  const scan = await getScanById(scanId);
+  const [scan, history] = await Promise.all([
+    getScanById(scanId),
+    getChatHistory(scanId),
+  ]);
   if (!scan) {
     redirect("/assistant");
   }
-
-  const history = await getChatHistory(scanId);
   
   // Map Supabase rows to AI SDK UIMessage format
   const initialMessages: UIMessage[] = history.map((msg) => ({
