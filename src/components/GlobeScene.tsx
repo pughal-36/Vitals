@@ -12,7 +12,7 @@ const AMBER = "#F3E45D"; // palette yellow, reserved for the site pin
 const RADIUS = 0.96;
 const EARTH_ROTATION_RADIANS_PER_SECOND = (Math.PI * 2) / 20;
 
-type MotionInput = { x: number; y: number; dragging: boolean; dragX: number; dragY: number; wheel: number; zoom: number };
+type MotionInput = { x: number; y: number; dragging: boolean; dragX: number; dragY: number };
 type Props = { scanId?: string; score?: number; active: boolean };
 
 function hashString(value: string) {
@@ -87,8 +87,6 @@ function Earth({ input, scanId, score }: { input: MutableRefObject<MotionInput>;
       root.current.rotation.x += state.dragY * 0.005;
       state.dragX *= 0.84;
       state.dragY *= 0.84;
-      root.current.rotation.y += state.wheel;
-      state.wheel *= 0.88;
       const hasAudit = score !== undefined && Boolean(scanId);
 
       const targetX = hasAudit ? coords.latitude : -state.y * 0.16;
@@ -110,8 +108,6 @@ function Earth({ input, scanId, score }: { input: MutableRefObject<MotionInput>;
       ringA.current.scale.setScalar(a);
       ringB.current.scale.setScalar(b);
     }
-    const camera = _.camera;
-    camera.position.z = THREE.MathUtils.damp(camera.position.z, 3.15 + state.zoom, 3.5, step);
   });
 
   return (
@@ -189,12 +185,12 @@ function FrameLimiter({ active }: { active: boolean }) {
 }
 
 export default function GlobeScene({ scanId, score, active }: Props) {
-  const input = useRef<MotionInput>({ x: 0, y: 0, dragging: false, dragX: 0, dragY: 0, wheel: 0, zoom: 0 });
+  const input = useRef<MotionInput>({ x: 0, y: 0, dragging: false, dragX: 0, dragY: 0 });
   const pointer = useRef({ down: false, x: 0, y: 0 });
   return <div
     className="globe-canvas"
     role="img"
-    aria-label={scanId ? `Interactive low-poly Earth. Audit score ${score ?? "available"}. Drag to rotate; scroll to zoom.` : "Interactive low-poly Earth. Drag to tilt and scroll to zoom."}
+    aria-label={scanId ? `Interactive low-poly Earth. Audit score ${score ?? "available"}. Drag to tilt.` : "Interactive low-poly Earth. Drag to tilt."}
     onPointerDown={(event) => { pointer.current = { down: true, x: event.clientX, y: event.clientY }; input.current.dragging = true; event.currentTarget.setPointerCapture(event.pointerId); }}
     onPointerUp={(event) => { pointer.current.down = false; input.current.dragging = false; event.currentTarget.releasePointerCapture(event.pointerId); }}
     onPointerCancel={() => { pointer.current.down = false; input.current.dragging = false; }}
@@ -209,7 +205,6 @@ export default function GlobeScene({ scanId, score, active }: Props) {
         pointer.current.y = event.clientY;
       }
     }}
-    onWheel={(event) => { event.preventDefault(); input.current.zoom = THREE.MathUtils.clamp(input.current.zoom + event.deltaY * 0.001, -0.55, 1.25); input.current.wheel += event.deltaY * 0.00025; }}
   >
     <Canvas dpr={[1, 1.5]} camera={{ position: [0, 0, 3.15], fov: 38 }} frameloop={active ? "demand" : "never"} gl={{ antialias: true, alpha: true, powerPreference: "low-power" }}>
       <FrameLimiter active={active} />

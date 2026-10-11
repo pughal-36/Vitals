@@ -84,6 +84,6 @@ export default function GlobeExperience({ scanId, score }: { scanId?: string; sc
       </div>
       <div className="globe-instrument-readout" aria-hidden="true"><span>EARTH / 001</span><span>{highlighted ? "SITE SIGNAL LOCKED" : "BASELINE / CALM"}</span></div>
     </div>
-    <p className="globe-help">DRAG TO TILT <span>·</span> SCROLL TO ADJUST</p>
+    <p className="globe-help">Drag to tilt</p>
   </div>;
 }
