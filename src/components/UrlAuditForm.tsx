@@ -37,10 +37,9 @@ function QuickChecksCard({ quickChecks }: { quickChecks: QuickChecks }) {
   return (
     <div className="mb-6 rounded-2xl border border-border bg-surface p-5 text-left transition-all duration-200">
       <div className="mb-4 flex items-center justify-between border-b border-border/50 pb-3">
-        <span className="font-mono text-[10px] tracking-[.12em] text-[#B87E2F]">
-          PHASE 1 / DIRECT HTML SIGNALS
+        <span className="font-mono text-xs font-semibold text-foreground">
+          Direct HTML checks
         </span>
-        <span className="font-mono text-[9px] text-muted">COMPLETED ~1-2S</span>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-xl border border-border/60 bg-surface-hover/30 p-3">
@@ -154,11 +153,11 @@ function TimingsBadge({ timings }: { timings: ScanTimings }) {
 
   return (
     <div className="flex flex-wrap items-center gap-3 font-mono text-[9px] tracking-wider text-muted border-t border-border/40 pt-3 mt-4">
-      <span>TIMINGS:</span>
-      {p1 && <span>P1 HTML: <strong className="text-foreground">{p1}</strong></span>}
-      {p2 && <span>P2 PSI: <strong className="text-foreground">{p2}</strong></span>}
-      {p3 && <span>P3 AI: <strong className="text-foreground">{p3}</strong></span>}
-      {total && <span>TOTAL: <strong className="text-[#E8A33D]">{total}</strong></span>}
+      <span>Timings:</span>
+      {p1 && <span>HTML: <strong className="text-foreground">{p1}</strong></span>}
+      {p2 && <span>PageSpeed: <strong className="text-foreground">{p2}</strong></span>}
+      {p3 && <span>AI: <strong className="text-foreground">{p3}</strong></span>}
+      {total && <span>Total: <strong className="text-primary">{total}</strong></span>}
     </div>
   );
 }
@@ -520,14 +519,13 @@ export default function UrlAuditForm({ initialScan }: { initialScan?: ScanRow })
             }}
           />
 
-          {/* AI Summary Card (Phase 3) */}
+          {/* AI Summary Card */}
           {currentScan.summary && (
-            <div className="mb-6 rounded-2xl border border-[#AEB4BA] bg-surface p-6 shadow-sm">
+            <div className="mb-6 rounded-2xl border border-border bg-surface p-6 shadow-sm">
               <div className="mb-3 flex items-center justify-between border-b border-border/50 pb-2">
-                <span className="font-mono text-[10px] tracking-[.12em] text-[#B87E2F]">
-                  PHASE 3 / GEMINI FLASH SUMMARY
+                <span className="font-mono text-xs font-semibold text-foreground">
+                  Summary
                 </span>
-                <span className="font-mono text-[9px] text-muted">AI-GENERATED SYNTHESIS</span>
               </div>
               <div className="prose prose-sm text-foreground max-w-none leading-relaxed whitespace-pre-wrap">
                 {currentScan.summary}

@@ -8,11 +8,11 @@ describe('SeoLoadingTips Component', () => {
     sessionStorage.clear();
   });
 
-  it('renders initial loading state with field note label', () => {
+  it('renders initial loading state', () => {
     render(<SeoLoadingTips />);
 
-    expect(screen.getByText('FIELD NOTE')).toBeVisible();
     expect(screen.getByRole('paragraph')).toHaveAttribute('aria-live', 'polite');
+    expect(screen.getByRole('paragraph')).toHaveTextContent(/Loading tips/i);
   });
 
   it('fetches fresh tips from /api/tips and displays them', async () => {
@@ -44,7 +44,7 @@ describe('SeoLoadingTips Component', () => {
     await waitFor(
       () => {
         const p = screen.getByRole('paragraph');
-        expect(p.textContent).toContain('FIELD NOTE');
+        expect(p.textContent).toBeTruthy();
       },
       { timeout: 4000 }
     );

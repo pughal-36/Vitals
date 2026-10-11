@@ -212,9 +212,7 @@ footer.vitals-footer a { min-width: 44px; min-height: 44px; display: inline-flex
 .workflow-step { border-top: 1px solid var(--line); padding: 12px 0 4px; }
 .workflow-step > span { color: var(--olive); font-size: 12px; }
 .workflow-step h2 { margin-top: 8px; color: var(--ink); font-size: 16px; font-weight: 650; }
-.workflow-step p { margin-top: 4px; color: var(--muted); font-size: 14px; line-height: 1.6; }
-.seo-tip { display: flex; align-items: flex-start; gap: 12px; min-height: 48px; border-left: 3px solid var(--olive); padding: 8px 0 8px 12px; color: var(--muted); }
-.seo-tip-index { flex: 0 0 auto; padding-top: 2px; color: var(--olive); font-size: 11px; font-weight: 650; }
+.seo-tip { min-height: 28px; padding: 6px 0; color: var(--muted); }
 .seo-tip-copy { color: var(--ink); font-size: 14px; line-height: 1.5; }
 .scan-empty { display: flex; align-items: flex-start; }
 

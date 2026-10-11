@@ -86,5 +86,5 @@ export default function SeoLoadingTips() {
     return () => { mounted = false; window.clearTimeout(slowFallback); window.clearInterval(timer); };
   }, [addBatch, getSeen]);
 
-  return <p className="seo-tip" aria-live="polite" aria-atomic="true"><span className="seo-tip-index">FIELD NOTE</span><span key={tip} className="seo-tip-copy">{tip || "A few useful search signals are coming into focus…"}</span></p>;
+  return <p className="seo-tip" aria-live="polite" aria-atomic="true"><span key={tip} className="seo-tip-copy">{tip || "Loading tips..."}</span></p>;
 }

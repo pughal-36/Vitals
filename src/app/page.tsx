@@ -25,7 +25,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
 
       <section id="audit" className="hero-audit" aria-labelledby="audit-title">
         <h2 id="audit-title">Start with a URL</h2>
-        <p className="hero-audit-intro">Check your page speed, search signals, accessibility, and the next improvements worth making.</p>
+        <p className="hero-audit-intro">Checks speed, accessibility, best practices and SEO for a page.</p>
         <UrlAuditForm initialScan={scan ?? undefined} />
         <div className="mt-6"><RecentScans /></div>
         {scan && composite !== undefined && <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-muted">
@@ -36,12 +36,12 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       </section>
 
       <section className="mx-auto grid w-full max-w-6xl gap-6 border-t border-border px-5 py-9 sm:px-6 md:grid-cols-3" aria-label="Vitals audit workflow">
-        <article className="workflow-step"><span>Audit</span><h2>Measure the live page.</h2><p>Run a Lighthouse-backed scan with Google PageSpeed Insights.</p></article>
-        <article className="workflow-step"><span>Readout</span><h2>Find the useful signals.</h2><p>See the scores and key findings stored with your scan.</p></article>
-        <article className="workflow-step"><span>Assistant</span><h2>Turn findings into next steps.</h2><p>Ask Gemini Flash about this audit, with the saved scan as context.</p></article>
+        <article className="workflow-step"><h2>Audit</h2><p>Runs a Lighthouse scan of the URL using Google PageSpeed Insights.</p></article>
+        <article className="workflow-step"><h2>Readout</h2><p>Shows the saved scores for a scan.</p></article>
+        <article className="workflow-step"><h2>Assistant</h2><p>Answers questions about a saved scan using Gemini.</p></article>
       </section>
       <section className="mx-auto w-full max-w-6xl px-5 pb-12 sm:px-6" aria-label="How Vitals works">
-        <p className="max-w-4xl text-sm leading-6 text-muted">Vitals sends your URL to Google PageSpeed Insights for a real Lighthouse audit, saves the scan in Supabase, and uses Gemini Flash to help explain the results. AI-generated advice can be inaccurate; verify recommendations before applying them in production.</p>
+        <p className="max-w-4xl text-sm leading-6 text-muted">Scans are run by Google PageSpeed Insights and saved in Supabase. Assistant answers come from Gemini and can be wrong; check them before changing production.</p>
       </section>
     </main>
   );

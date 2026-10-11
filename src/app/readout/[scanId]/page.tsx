@@ -48,8 +48,7 @@ export default async function ReadoutPage({ params }: { params: Promise<{ scanId
       <section className="px-5 py-12 sm:px-8 sm:py-16">
         <div className="mx-auto max-w-4xl">
           <div className="mb-8">
-            <p className="mb-3 text-sm font-semibold text-accent">Score summary</p>
-            <h2 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">Four checks.<br />One clear direction.</h2>
+            <h2 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">Scores</h2>
           </div>
           <div className="results-panel p-5 sm:p-8">
             <div className="score-list" aria-label="Lighthouse category scores">
