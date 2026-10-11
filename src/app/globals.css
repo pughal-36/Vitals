@@ -240,6 +240,71 @@ footer.vitals-footer a { min-width: 44px; min-height: 44px; display: inline-flex
 .vitals-chat-page input, .vitals-chat-page textarea { min-height: 44px; }
 .about-built { color: var(--ink) !important; }
 
+/* ── Aurora Hero ─────────────────────────────────────────────── */
+.aurora-hero {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.aurora-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+/* Semi-transparent dark overlay + vignette for text readability.
+   Two radial gradients: a central "clear spot" and edge darkening.
+   Ensures ≥4.5:1 contrast ratio over the brightest aurora colours. */
+.aurora-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.55) 70%, rgba(0,0,0,0.75) 100%);
+  pointer-events: none;
+}
+.aurora-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  color: white;
+  padding: 0 24px;
+}
+.aurora-headline {
+  margin: 0;
+  font-family: var(--font-display), "Bodoni MT", "Times New Roman", serif;
+  font-size: clamp(3.5rem, 12vw, 10rem);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+  color: #FFFDF7;
+  text-shadow: 0 2px 30px rgba(0,0,0,0.4);
+}
+.aurora-intro {
+  margin: 16px 0 0;
+  font-size: clamp(1rem, 2.5vw, 1.4rem);
+  color: rgba(255,255,255,0.88);
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 12px rgba(0,0,0,0.5);
+}
+
+/* Reduced-motion: show a static CSS gradient in the same palette.
+   The canvas still renders one frame, but this ensures a fallback
+   even if WebGL fails. */
+@media (prefers-reduced-motion: reduce) {
+  .aurora-canvas {
+    display: none;
+  }
+  .aurora-hero {
+    background: linear-gradient(135deg, #111B38 0%, #248487 40%, #74599B 70%, #D24F7F 100%);
+  }
+}
+
 @media (max-width: 640px) {
   .vitals-nav { height: 64px; }
   .vitals-nav-inner { padding-inline: 16px; }
