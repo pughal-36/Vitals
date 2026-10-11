@@ -1,4 +1,5 @@
 import { getSupabaseClient } from "./client";
+import { getSupabaseServerClient } from "./server";
 
 export type QuickChecks = {
   title: string | null;
@@ -46,8 +47,13 @@ export type ScanRow = {
 
 export type ScanInsert = Omit<ScanRow, "id" | "created_at">;
 
+// Read queries use the public client
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const table = () => (getSupabaseClient() as any).from("scans");
+const readTable = () => (getSupabaseClient() as any).from("scans");
+
+// Server-side write queries use the service role client
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const writeTable = () => (getSupabaseServerClient() as any).from("scans");
 
 /** Look for a recent completed or running scan for the given URL and strategy within maxAgeHours */
 export async function findRecentScan(
@@ -57,7 +63,7 @@ export async function findRecentScan(
 ): Promise<ScanRow | null> {
   try {
     const cutoff = new Date(Date.now() - maxAgeHours * 60 * 60 * 1000).toISOString();
-    const { data, error } = await table()
+    const { data, error } = await readTable()
       .select("*")
       .eq("url", url)
       .eq("strategy", strategy)
@@ -129,7 +135,7 @@ export async function createPendingScan(
       status: "pending",
       updated_at: new Date().toISOString(),
     };
-    const { data, error } = await table().insert(fullInsert).select().single();
+    const { data, error } = await writeTable().insert(fullInsert).select().single();
     if (error) {
       console.error("[scan] createPendingScan initial insert failed:", {
         message: error.message,
@@ -146,7 +152,7 @@ export async function createPendingScan(
   }
 
   // Fallback to minimal schema if migration is not yet applied
-  const { data, error } = await table().insert(baseInsert).select().single();
+  const { data, error } = await writeTable().insert(baseInsert).select().single();
   if (error) {
     console.error("[scan] createPendingScan fallback insert failed:", {
       message: error.message,
@@ -171,14 +177,13 @@ export async function updateScan(
   try {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { id: _, created_at: __, ...safeUpdates } = updates;
-    const { data, error } = await table()
+    const { data, error } = await writeTable()
       .update({
         ...safeUpdates,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
-      .select()
-      .single();
+      .select();
 
     if (error) {
       console.error(`[scan] update failed for scan ${id}:`, {
@@ -210,11 +215,10 @@ export async function updateScan(
           _timings: safeUpdates.timings,
         };
 
-        const { data: fallbackData, error: fallbackError } = await table()
+        const { data: fallbackData, error: fallbackError } = await writeTable()
           .update(strippedUpdates)
           .eq("id", id)
-          .select()
-          .single();
+          .select();
 
         if (fallbackError) {
           console.error(`[scan] update failed fallback for scan ${id}:`, {
@@ -224,17 +228,21 @@ export async function updateScan(
             hint: fallbackError.hint,
             scanId: id,
           });
-        } else if (fallbackData) {
+        } else if (!fallbackData || fallbackData.length === 0) {
+          console.error(`[scan] update matched 0 rows for scan ${id}`);
+        } else {
           return {
-            ...fallbackData,
-            status: safeUpdates.status || fallbackData.status,
-            quick_checks: safeUpdates.quick_checks || fallbackData.quick_checks,
-            summary: safeUpdates.summary || fallbackData.summary,
+            ...fallbackData[0],
+            status: safeUpdates.status || fallbackData[0].status,
+            quick_checks: safeUpdates.quick_checks || fallbackData[0].quick_checks,
+            summary: safeUpdates.summary || fallbackData[0].summary,
           } as ScanRow;
         }
       }
-    } else if (data) {
-      return data as ScanRow;
+    } else if (!data || data.length === 0) {
+      console.error(`[scan] update matched 0 rows for scan ${id}`);
+    } else {
+      return data[0] as ScanRow;
     }
   } catch (error) {
     console.error(`[scan] update failed with exception for scan ${id}:`, error);
@@ -245,7 +253,7 @@ export async function updateScan(
 
 /** Save a completed PageSpeed audit to Supabase (synchronous legacy path). Returns the new row. */
 export async function saveScan(scan: ScanInsert): Promise<ScanRow> {
-  const { data, error } = await table().insert(scan).select().single();
+  const { data, error } = await writeTable().insert(scan).select().single();
   if (error) {
     console.error("[scan] saveScan failed:", {
       message: error.message,
@@ -260,7 +268,7 @@ export async function saveScan(scan: ScanInsert): Promise<ScanRow> {
 
 /** Fetch the most recent N scans. */
 export async function listScans(limit = 50): Promise<ScanRow[]> {
-  const { data, error } = await table()
+  const { data, error } = await readTable()
     .select("*")
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -280,7 +288,7 @@ export async function listScans(limit = 50): Promise<ScanRow[]> {
 /** Fetch a single scan by ID. */
 export async function getScanById(id: string): Promise<ScanRow | null> {
   try {
-    const { data, error } = await table().select("*").eq("id", id).single();
+    const { data, error } = await readTable().select("*").eq("id", id).single();
     if (error) {
       console.error(`[scan] getScanById failed for scan ${id}:`, {
         message: error.message,
