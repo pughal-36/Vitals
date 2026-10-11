@@ -96,7 +96,7 @@ export async function POST(req: Request) {
     };
 
     type AuditEntry = { id?: string; title?: string; description?: string; score?: number | null; displayValue?: string | null };
-    const failingAudits = Object.values(data.lighthouseResult?.audits || {})
+    const failingAudits = (Object.values(data.lighthouseResult?.audits || {}) as AuditEntry[])
       .filter((a): a is AuditEntry & { id: string; title: string; score: number } =>
         Boolean(a && a.id && a.title && a.score !== null && a.score !== undefined && a.score < 1)
       )
