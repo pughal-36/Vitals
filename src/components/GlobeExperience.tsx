@@ -51,29 +51,58 @@ export default function GlobeExperience({ scanId, score }: { scanId?: string; sc
 
   useEffect(() => {
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const lowPower = navigator.hardwareConcurrency <= 2 || (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true;
-    // Browser capability checks are external state; static markup is the SSR-safe first paint.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setStaticOnly(motion || lowPower || !supportsWebGL());
+    const isMobile = window.matchMedia("(max-width: 768px)").matches;
+    const lowPower =
+      (typeof navigator !== "undefined" && navigator.hardwareConcurrency <= 2) ||
+      (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true;
+
+    // On mobile devices, reduced-motion, low-power, or WebGL-unsupported environments,
+    // use the lightweight, fast-loading SVG globe to avoid heavy 3D bundles and main-thread blocking.
+    const shouldKeepStatic = motion || isMobile || lowPower || !supportsWebGL();
+    setStaticOnly(shouldKeepStatic);
+
+    if (shouldKeepStatic) return;
+
     const node = panelRef.current;
     if (!node) return;
-    let warmTimer: number | undefined;
+    let idleHandle: number | undefined;
+    let warmTimer: ReturnType<typeof setTimeout> | undefined;
+
     const warmObserver = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
         warmObserver.disconnect();
-        // Let the headline and primary action paint before loading WebGL.
-        warmTimer = window.setTimeout(() => setNearViewport(true), 1500);
+        // Defer 3D WebGL bundle until browser is idle
+        if ("requestIdleCallback" in window) {
+          idleHandle = (window as unknown as { requestIdleCallback: (cb: () => void, opts: { timeout: number }) => number }).requestIdleCallback(
+            () => setNearViewport(true),
+            { timeout: 3500 }
+          );
+        } else {
+          warmTimer = setTimeout(() => setNearViewport(true), 2500);
+        }
       }
     }, { rootMargin: "220px 0px", threshold: 0.01 });
+
     const visibleObserver = new IntersectionObserver(([entry]) => {
       intersectsViewport.current = entry.isIntersecting;
       setVisible(entry.isIntersecting && document.visibilityState === "visible");
     }, { threshold: 0.01 });
+
     warmObserver.observe(node);
     visibleObserver.observe(node);
+
     const onVisibility = () => setVisible(document.visibilityState === "visible" && intersectsViewport.current);
     document.addEventListener("visibilitychange", onVisibility);
-    return () => { if (warmTimer !== undefined) window.clearTimeout(warmTimer); warmObserver.disconnect(); visibleObserver.disconnect(); document.removeEventListener("visibilitychange", onVisibility); };
+
+    return () => {
+      if (warmTimer !== undefined) clearTimeout(warmTimer);
+      if (idleHandle !== undefined && "cancelIdleCallback" in window) {
+        (window as unknown as { cancelIdleCallback: (handle: number) => void }).cancelIdleCallback(idleHandle);
+      }
+      warmObserver.disconnect();
+      visibleObserver.disconnect();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, []);
 
   const highlighted = Boolean(scanId && score !== undefined);
