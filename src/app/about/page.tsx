@@ -96,7 +96,8 @@ export default function AboutPage() {
 
         <section className="about-section" aria-labelledby="credits-title">
           <h2 id="credits-title">Credits</h2>
-          <p className="about-built">Built as my capstone project for the FlyRank frontend internship.</p>
+          <p className="mt-2 text-sm text-muted">Earth model by Zoe XR via <a href="https://poly.pizza/m/3U-XAIY031u" className="underline underline-offset-2">Poly Pizza</a>, under <a href="https://poly.pizza/docs/tos" className="underline underline-offset-2">Creative Commons Attribution (version not stated on the listing)</a>.</p>
+          <p className="about-built mt-4">Built as my capstone project for the FlyRank frontend internship.</p>
           <a className="about-contribute" href="https://github.com/pughal-36/Vitals">Contribute on GitHub</a>
           <p className="about-built mt-6"><strong>Built with:</strong> Next.js, Tailwind CSS, Supabase, PageSpeed Insights API, Gemini Flash, Three.js, and React Three Fiber.</p>
           <p className="mt-5 font-semibold text-foreground">Sources and licenses</p>

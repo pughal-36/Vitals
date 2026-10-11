@@ -20,10 +20,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Navigation />
         </Suspense>
         <div className="flex-1 flex flex-col">{children}</div>
-        <footer className="vitals-footer border-t py-5 text-center text-sm">
-          <p>Vitals — website signals, made easier to read.</p>
-          <p className="mt-2 text-xs">Earth model by Zoe XR via <a href="https://poly.pizza/m/3U-XAIY031u" className="underline underline-offset-2">Poly Pizza</a>, under <a href="https://poly.pizza/docs/tos" className="underline underline-offset-2">Creative Commons Attribution (version not stated on the listing)</a>.</p>
-        </footer>
       </body>
     </html>
   );
