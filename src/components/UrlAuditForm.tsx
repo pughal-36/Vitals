@@ -374,7 +374,7 @@ export default function UrlAuditForm({ initialScan }: { initialScan?: ScanRow })
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
               </svg>
             )}
-            {isLoading ? "Scanning…" : "Scan"}
+            {isLoading ? "Scanning..." : "Scan"}
           </button>
         </div>
 
@@ -391,18 +391,14 @@ export default function UrlAuditForm({ initialScan }: { initialScan?: ScanRow })
       {/* ─── Loading & Progressive Progress Area ─── */}
       {isLoading && (
         <div className="mt-6 text-left" aria-live="polite" aria-label="Audit in progress">
-          <div className="flex items-center justify-between mb-4 border-b border-border/50 pb-2">
-            <div className="flex items-center gap-2.5 font-mono text-xs text-muted">
-              <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              <span>
-                {currentScan?.quick_checks
-                  ? "Phase 2: Running PageSpeed Insights audit…"
-                  : "Phase 1: Fetching direct HTML & meta tags…"}
-              </span>
-            </div>
-            <span className="font-mono text-[9px] text-[#E8A33D] tracking-wider">
-              {currentScan?.quick_checks ? "PROGRESSIVE / PSI RUNNING" : "PROGRESSIVE / HTML FETCH"}
-            </span>
+          <div className="mb-4 border-b border-border/50 pb-2">
+            <p className="font-mono text-xs text-muted">
+              {currentScan?.score_performance !== null && currentScan?.score_performance !== undefined
+                ? "Saving results..."
+                : currentScan?.quick_checks
+                ? "Running Lighthouse..."
+                : "Checking the page HTML..."}
+            </p>
           </div>
 
           <SeoLoadingTips />
