@@ -74,10 +74,11 @@ export async function runScanPipeline(scanId: string, url: string, strategy: "mo
           };
         }
       } catch (phase1Err) {
-        console.warn("Phase 1 direct HTML fetch warning:", phase1Err);
+        console.warn(`[scan] Phase 1 direct HTML fetch warning for scan ${scanId}:`, phase1Err);
       }
 
-      timings.phase1Ms = Date.now() - phase1Start;
+      timings.html_fetch = Date.now() - phase1Start;
+      timings.phase1Ms = timings.html_fetch;
 
       // Save Phase 1 progress to Supabase immediately so client renders quick checks while PSI runs
       await updateScan(scanId, {
@@ -196,7 +197,8 @@ export async function runScanPipeline(scanId: string, url: string, strategy: "mo
         failingAudits,
       };
 
-      timings.phase2Ms = Date.now() - phase2Start;
+      timings.pagespeed = Date.now() - phase2Start;
+      timings.phase2Ms = timings.pagespeed;
 
       return {
         scores,
@@ -209,9 +211,9 @@ export async function runScanPipeline(scanId: string, url: string, strategy: "mo
     // Run Phase 1 and Phase 2 in parallel
     const [quickChecks, phase2Data] = await Promise.all([runPhase1(), runPhase2()]);
 
-    timings.totalMs = Date.now() - startTime;
+    const dbSaveStart = Date.now();
 
-    // Mark scan status "done" immediately as soon as the four scores are saved!
+    // Mark scan status "done" immediately as soon as the four scores are saved
     await updateScan(scanId, {
       status: "done",
       score_performance: phase2Data.scores.performance,
@@ -220,6 +222,13 @@ export async function runScanPipeline(scanId: string, url: string, strategy: "mo
       score_seo: phase2Data.scores.seo,
       raw_categories: phase2Data.rawCategoriesPayload,
       quick_checks: quickChecks,
+    });
+
+    timings.db_save = Date.now() - dbSaveStart;
+    timings.totalMs = Date.now() - startTime;
+
+    // Save initial complete timings
+    await updateScan(scanId, {
       timings,
     });
 
@@ -258,30 +267,40 @@ Keep the summary clear, professional, and under 250 words.`;
         setTimeout(() => reject(new Error("Gemini summary timed out after 15s")), 15000)
       );
 
+      const geminiStart = Date.now();
       const geminiPromise = generateText({
         model: geminiFlash,
         prompt,
       });
 
       const { text } = await Promise.race([geminiPromise, geminiTimeout]);
+      timings.gemini = Date.now() - geminiStart;
+      timings.phase3Ms = timings.gemini;
+      timings.totalMs = Date.now() - startTime;
+
       if (text) {
         await updateScan(scanId, {
           summary: text,
+          timings,
         });
       }
     } catch (geminiError) {
-      console.error("Gemini summary generation failed or timed out:", geminiError);
+      console.error(`[scan] Gemini summary generation failed or timed out for scan ${scanId}:`, geminiError);
       // Ignore failure, leave summary empty
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Audit processing failed.";
-    console.error(`Scan ${scanId} failed:`, errorMessage);
+    const errorMessage = error instanceof Error ? error.message : "The scan did not finish. Try again.";
+    console.error(`[scan] Scan ${scanId} pipeline failed:`, error);
 
     timings.totalMs = Date.now() - startTime;
-    await updateScan(scanId, {
-      status: "failed",
-      error_text: errorMessage,
-      timings,
-    });
+    try {
+      await updateScan(scanId, {
+        status: "failed",
+        error_text: errorMessage,
+        timings,
+      });
+    } catch (updateErr) {
+      console.error(`[scan] Failed to mark scan ${scanId} as failed:`, updateErr);
+    }
   }
 }

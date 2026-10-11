@@ -30,6 +30,7 @@ export default function SeoLoadingTips() {
 
   useEffect(() => {
     const start = Math.floor(Math.random() * LOADING_TIPS.length);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIndex(start);
 
     const interval = window.setInterval(() => {

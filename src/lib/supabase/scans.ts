@@ -16,10 +16,14 @@ export type QuickChecks = {
 };
 
 export type ScanTimings = {
+  html_fetch?: number;
+  pagespeed?: number;
+  db_save?: number;
+  gemini?: number;
+  totalMs?: number;
   phase1Ms?: number;
   phase2Ms?: number;
   phase3Ms?: number;
-  totalMs?: number;
 };
 
 export type ScanRow = {
@@ -61,7 +65,18 @@ export async function findRecentScan(
       .order("created_at", { ascending: false })
       .limit(10);
 
-    if (error || !data || data.length === 0) return null;
+    if (error) {
+      console.error("[scan] findRecentScan failed:", {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        url,
+      });
+      return null;
+    }
+
+    if (!data || data.length === 0) return null;
 
     for (const rawRow of data) {
       const row = rawRow as ScanRow;
@@ -87,7 +102,7 @@ export async function findRecentScan(
 
     return null;
   } catch (error) {
-    console.error("Error finding recent scan:", error);
+    console.error("[scan] findRecentScan exception:", error);
     return null;
   }
 }
@@ -108,21 +123,40 @@ export async function createPendingScan(
   };
 
   try {
-    // Try with full new schema
+    // Try with full schema
     const fullInsert = {
       ...baseInsert,
       status: "pending",
       updated_at: new Date().toISOString(),
     };
     const { data, error } = await table().insert(fullInsert).select().single();
-    if (!error && data) return data as ScanRow;
-  } catch {
-    // Column missing fallback below
+    if (error) {
+      console.error("[scan] createPendingScan initial insert failed:", {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        url,
+      });
+    } else if (data) {
+      return data as ScanRow;
+    }
+  } catch (err) {
+    console.error("[scan] createPendingScan initial insert exception:", err);
   }
 
   // Fallback to minimal schema if migration is not yet applied
   const { data, error } = await table().insert(baseInsert).select().single();
-  if (error) throw new Error(`Failed to create scan: ${error.message}`);
+  if (error) {
+    console.error("[scan] createPendingScan fallback insert failed:", {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      url,
+    });
+    throw new Error(`Failed to create scan: ${error.message}`);
+  }
   return {
     ...(data as ScanRow),
     status: "pending",
@@ -146,46 +180,64 @@ export async function updateScan(
       .select()
       .single();
 
-    if (!error && data) return data as ScanRow;
+    if (error) {
+      console.error(`[scan] update failed for scan ${id}:`, {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        scanId: id,
+      });
 
-    // If update failed (possibly due to column missing), attempt stripped update
-    if (error && error.message?.includes("column")) {
-      const strippedUpdates: Record<string, unknown> = {};
-      if (safeUpdates.score_performance !== undefined) strippedUpdates.score_performance = safeUpdates.score_performance;
-      if (safeUpdates.score_accessibility !== undefined) strippedUpdates.score_accessibility = safeUpdates.score_accessibility;
-      if (safeUpdates.score_best_practices !== undefined) strippedUpdates.score_best_practices = safeUpdates.score_best_practices;
-      if (safeUpdates.score_seo !== undefined) strippedUpdates.score_seo = safeUpdates.score_seo;
-      
-      // Store additional pipeline fields in raw_categories
-      const existingScan = await getScanById(id);
-      const existingRaw = (existingScan?.raw_categories || {}) as Record<string, unknown>;
-      strippedUpdates.raw_categories = {
-        ...existingRaw,
-        ...(safeUpdates.raw_categories || {}),
-        _status: safeUpdates.status,
-        _quick_checks: safeUpdates.quick_checks,
-        _summary: safeUpdates.summary,
-        _error_text: safeUpdates.error_text,
-        _timings: safeUpdates.timings,
-      };
+      // If update failed (possibly due to column missing), attempt stripped update
+      if (error.message?.includes("column")) {
+        const strippedUpdates: Record<string, unknown> = {};
+        if (safeUpdates.score_performance !== undefined) strippedUpdates.score_performance = safeUpdates.score_performance;
+        if (safeUpdates.score_accessibility !== undefined) strippedUpdates.score_accessibility = safeUpdates.score_accessibility;
+        if (safeUpdates.score_best_practices !== undefined) strippedUpdates.score_best_practices = safeUpdates.score_best_practices;
+        if (safeUpdates.score_seo !== undefined) strippedUpdates.score_seo = safeUpdates.score_seo;
+        
+        // Store additional pipeline fields in raw_categories
+        const existingScan = await getScanById(id);
+        const existingRaw = (existingScan?.raw_categories || {}) as Record<string, unknown>;
+        strippedUpdates.raw_categories = {
+          ...existingRaw,
+          ...(safeUpdates.raw_categories || {}),
+          _status: safeUpdates.status,
+          _quick_checks: safeUpdates.quick_checks,
+          _summary: safeUpdates.summary,
+          _error_text: safeUpdates.error_text,
+          _timings: safeUpdates.timings,
+        };
 
-      const { data: fallbackData } = await table()
-        .update(strippedUpdates)
-        .eq("id", id)
-        .select()
-        .single();
+        const { data: fallbackData, error: fallbackError } = await table()
+          .update(strippedUpdates)
+          .eq("id", id)
+          .select()
+          .single();
 
-      if (fallbackData) {
-        return {
-          ...fallbackData,
-          status: safeUpdates.status || fallbackData.status,
-          quick_checks: safeUpdates.quick_checks || fallbackData.quick_checks,
-          summary: safeUpdates.summary || fallbackData.summary,
-        } as ScanRow;
+        if (fallbackError) {
+          console.error(`[scan] update failed fallback for scan ${id}:`, {
+            message: fallbackError.message,
+            code: fallbackError.code,
+            details: fallbackError.details,
+            hint: fallbackError.hint,
+            scanId: id,
+          });
+        } else if (fallbackData) {
+          return {
+            ...fallbackData,
+            status: safeUpdates.status || fallbackData.status,
+            quick_checks: safeUpdates.quick_checks || fallbackData.quick_checks,
+            summary: safeUpdates.summary || fallbackData.summary,
+          } as ScanRow;
+        }
       }
+    } else if (data) {
+      return data as ScanRow;
     }
   } catch (error) {
-    console.error(`Failed to update scan ${id}:`, error);
+    console.error(`[scan] update failed with exception for scan ${id}:`, error);
   }
 
   return getScanById(id);
@@ -194,7 +246,15 @@ export async function updateScan(
 /** Save a completed PageSpeed audit to Supabase (synchronous legacy path). Returns the new row. */
 export async function saveScan(scan: ScanInsert): Promise<ScanRow> {
   const { data, error } = await table().insert(scan).select().single();
-  if (error) throw new Error(`Failed to save scan: ${error.message}`);
+  if (error) {
+    console.error("[scan] saveScan failed:", {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+    });
+    throw new Error(`Failed to save scan: ${error.message}`);
+  }
   return data as ScanRow;
 }
 
@@ -204,7 +264,16 @@ export async function listScans(limit = 50): Promise<ScanRow[]> {
     .select("*")
     .order("created_at", { ascending: false })
     .limit(limit);
-  if (error) throw new Error(`Failed to fetch scans: ${error.message}`);
+
+  if (error) {
+    console.error("[scan] listScans failed:", {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+    });
+    throw new Error(`Failed to fetch scans: ${error.message}`);
+  }
   return (data ?? []) as ScanRow[];
 }
 
@@ -212,7 +281,17 @@ export async function listScans(limit = 50): Promise<ScanRow[]> {
 export async function getScanById(id: string): Promise<ScanRow | null> {
   try {
     const { data, error } = await table().select("*").eq("id", id).single();
-    if (error || !data) return null;
+    if (error) {
+      console.error(`[scan] getScanById failed for scan ${id}:`, {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        scanId: id,
+      });
+      return null;
+    }
+    if (!data) return null;
     
     // Check if fields are stored inside raw_categories fallback
     const row = data as ScanRow;
@@ -231,7 +310,7 @@ export async function getScanById(id: string): Promise<ScanRow | null> {
 
     return row;
   } catch (error) {
-    console.error("Failed to restore scan", error);
+    console.error(`[scan] Failed to restore scan ${id}:`, error);
     return null;
   }
 }
