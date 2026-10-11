@@ -11,7 +11,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
   const composite = scan ? Math.round(((scan.score_performance || 0) + (scan.score_seo || 0) + (scan.score_accessibility || 0) + (scan.score_best_practices || 0)) / 4) : undefined;
 
   return (
-    <main className="vitals-home flex-1">
+    <main id="main-content" tabIndex={-1} className="vitals-home flex-1 outline-none">
       {scan && <RememberScan scanId={scan.id} />}
       <section className="vitals-hero" id="hero" aria-labelledby="home-title">
         <div className="hero-copy">
@@ -35,10 +35,13 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
         </div>}
       </section>
 
-      <section className="mx-auto grid w-full max-w-6xl gap-6 border-t border-border px-5 py-9 sm:px-6 md:grid-cols-3" aria-label="Vitals audit workflow">
-        <article className="workflow-step"><h2>Audit</h2><p>Runs a Lighthouse scan of the URL using Google PageSpeed Insights.</p></article>
-        <article className="workflow-step"><h2>Readout</h2><p>Shows the saved scores for a scan.</p></article>
-        <article className="workflow-step"><h2>Assistant</h2><p>Answers questions about a saved scan using Gemini.</p></article>
+      <section className="mx-auto w-full max-w-6xl border-t border-border px-5 py-9 sm:px-6" aria-labelledby="workflow-heading">
+        <h2 id="workflow-heading" className="sr-only">Vitals audit workflow</h2>
+        <div className="grid gap-6 md:grid-cols-3">
+          <article className="workflow-step"><h3>Audit</h3><p>Runs a Lighthouse scan of the URL using Google PageSpeed Insights.</p></article>
+          <article className="workflow-step"><h3>Readout</h3><p>Shows the saved scores for a scan.</p></article>
+          <article className="workflow-step"><h3>Assistant</h3><p>Answers questions about a saved scan using Gemini.</p></article>
+        </div>
       </section>
       <section className="mx-auto w-full max-w-6xl px-5 pb-12 sm:px-6" aria-label="How Vitals works">
         <p className="max-w-4xl text-sm leading-6 text-muted">Scans are run by Google PageSpeed Insights and saved in Supabase. Assistant answers come from Gemini and can be wrong; check them before changing production.</p>

@@ -39,7 +39,7 @@ export default function ScanEntry({ destination, requestedScan }: { destination:
     return () => { cancelled = true; };
   }, [destination, requestedScan, router]);
 
-  return <main className="scan-empty flex-1 px-4 py-20 sm:py-28">
+  return <main id="main-content" tabIndex={-1} className="scan-empty flex-1 px-4 py-20 sm:py-28 outline-none">
     <div className="mx-auto max-w-xl border border-border bg-surface p-7 sm:p-10">
       <h1 className="text-3xl font-semibold tracking-[-.04em] text-foreground">Enter a URL to scan</h1>
       <p className="mt-3 text-sm leading-6 text-muted">{checked ? "No saved audit found. Enter a URL on the Audit page to start a scan." : "Checking for a saved audit..."}</p>

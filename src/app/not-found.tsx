@@ -2,13 +2,13 @@ import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[50vh] px-4 text-center">
+    <main id="main-content" tabIndex={-1} className="flex-1 flex flex-col items-center justify-center min-h-[50vh] px-4 text-center outline-none">
       <div className="w-16 h-16 bg-secondary/10 text-secondary rounded-full flex items-center justify-center mb-6">
         <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
       </div>
-      <h2 className="text-2xl font-semibold text-foreground mb-3">Page not found</h2>
+      <h1 className="text-2xl font-semibold text-foreground mb-3">Page not found</h1>
       <p className="text-muted mb-8 max-w-md mx-auto leading-relaxed">
         We couldn&apos;t find the page you were looking for. It might have been moved or deleted.
       </p>
@@ -18,6 +18,6 @@ export default function NotFound() {
       >
         Back to dashboard
       </Link>
-    </div>
+    </main>
   );
 }

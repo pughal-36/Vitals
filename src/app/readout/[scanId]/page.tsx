@@ -21,7 +21,7 @@ export default async function ReadoutPage({ params }: { params: Promise<{ scanId
   const composite = Math.round(scores.reduce((total, item) => total + item.score, 0) / scores.length);
 
   return (
-    <main className="results-page flex-1">
+    <main id="main-content" tabIndex={-1} className="results-page flex-1 outline-none">
       <RememberScan scanId={scanId} />
       <nav className="scan-route-links mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 pt-5" aria-label="Audit navigation">
         <span className="text-sm text-muted">Saved audit / {scan.id}</span>
@@ -51,7 +51,7 @@ export default async function ReadoutPage({ params }: { params: Promise<{ scanId
             <h2 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">Scores</h2>
           </div>
           <div className="results-panel p-5 sm:p-8">
-            <div className="score-list" aria-label="Lighthouse category scores">
+            <div className="score-list" role="region" aria-label="Lighthouse category scores">
               {scores.map(({ label, key, score }) => {
                 const value = Math.max(0, Math.min(100, score));
                 return <div key={key} className="score-row">

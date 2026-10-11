@@ -36,8 +36,8 @@ export default async function AssistantPage({ params }: { params: Promise<{ scan
   }
   
   return (
-    <main className="vitals-chat-page flex-1 flex flex-col">
-      <h1 className="sr-only">Assistant</h1>
+    <main id="main-content" tabIndex={-1} className="vitals-chat-page flex-1 flex flex-col outline-none">
+      <h1 className="sr-only">Audit Assistant</h1>
       <RememberScan scanId={scanId} />
       <div className="scan-route-links mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-3 px-4 pt-5">
         <span className="font-mono text-[10px] tracking-[.1em] text-muted">ASSISTANT / {scan.url.replace(/^https?:\/\//, "")}</span>

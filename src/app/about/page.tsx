@@ -75,7 +75,7 @@ const credits = [
 
 export default function AboutPage() {
   return (
-    <main className="about-page flex-1">
+    <main id="main-content" tabIndex={-1} className="about-page flex-1 outline-none">
       <div className="about-wrap">
         <h1>About Vitals</h1>
 
