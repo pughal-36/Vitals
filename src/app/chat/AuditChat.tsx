@@ -85,7 +85,7 @@ export function FetchMetaTagsUI({ part }: { part: any }) {
       return (
         <td className="px-4 py-3 text-sm font-medium text-foreground">
           {isImage ? (
-            <img src={value} alt="OG Image Thumbnail" className="h-12 w-auto max-w-[120px] rounded border border-border" />
+            <img src={value} alt="Open Graph image preview" className="h-12 w-auto max-w-[120px] rounded border border-border" />
           ) : (
              <span className="break-all">{value}</span>
           )}
@@ -96,36 +96,36 @@ export function FetchMetaTagsUI({ part }: { part: any }) {
     return (
       <div className="my-3 rounded-xl border border-border overflow-hidden shadow-sm bg-surface transition-opacity duration-200 animate-in fade-in">
         <div className="bg-primary/5 px-4 py-2 border-b border-border flex items-center gap-2 text-sm font-semibold text-primary">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
           </svg>
           Meta Tags Found
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse" aria-label="Extracted meta tags">
             <tbody className="divide-y divide-border">
               <tr>
-                <th className="px-4 py-3 text-sm font-medium text-muted w-1/3 bg-surface-hover/50">Title</th>
+                <th scope="row" className="px-4 py-3 text-sm font-medium text-muted w-1/3 bg-surface-hover/50">Title</th>
                 {renderField('Title', title)}
               </tr>
               <tr>
-                <th className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">Description</th>
+                <th scope="row" className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">Description</th>
                 {renderField('Description', description)}
               </tr>
               <tr>
-                <th className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">OG Title</th>
+                <th scope="row" className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">OG Title</th>
                 {renderField('OG Title', ogTitle)}
               </tr>
               <tr>
-                <th className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">OG Description</th>
+                <th scope="row" className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">OG Description</th>
                 {renderField('OG Description', ogDescription)}
               </tr>
               <tr>
-                <th className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">OG Image</th>
+                <th scope="row" className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">OG Image</th>
                 {renderField('OG Image', ogImage, true)}
               </tr>
               <tr>
-                <th className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">Canonical URL</th>
+                <th scope="row" className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">Canonical URL</th>
                 {renderField('Canonical URL', canonicalUrl)}
               </tr>
             </tbody>
@@ -230,6 +230,43 @@ export default function AuditChat({
     regenerate();
   };
 
+  // ─── Escape key and Stream Accessibility ───
+  // Pressing Escape while the AI is generating stops the stream immediately.
+  useEffect(() => {
+    if (!isGenerating) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        stop();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isGenerating, stop]);
+
+  // Polite announcement state: announces upon completion to avoid token-by-token screen reader spam.
+  const [announcement, setAnnouncement] = useState("");
+  const prevGenerating = useRef(false);
+
+  useEffect(() => {
+    if (prevGenerating.current && !isGenerating) {
+      const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+      if (lastAssistant) {
+        const text = getMessageText(lastAssistant).replace(/<chips>[\s\S]*?<\/chips>/g, "").trim();
+        if (text) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setAnnouncement(`Response complete: ${text.slice(0, 160)}${text.length > 160 ? "..." : ""}`);
+        }
+      }
+      // After stream completion, keep focus on input without stealing focus if user navigated elsewhere
+      const active = document.activeElement;
+      if (!active || active === document.body || scrollAreaRef.current?.contains(active)) {
+        inputRef.current?.focus();
+      }
+    }
+    prevGenerating.current = isGenerating;
+  }, [messages, isGenerating]);
+
   // ─── Auto-scroll logic ───
   // Only scroll to bottom if the user hasn't scrolled up manually.
   useEffect(() => {
@@ -281,7 +318,13 @@ export default function AuditChat({
       <div
         ref={scrollAreaRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto py-6 space-y-4 scroll-smooth overscroll-y-contain"
+        role="log"
+        aria-live="polite"
+        aria-atomic="false"
+        aria-relevant="additions text"
+        aria-label="Audit assistant conversation history"
+        tabIndex={0}
+        className="flex-1 overflow-y-auto py-6 space-y-4 scroll-smooth overscroll-y-contain outline-none focus-visible:ring-1 focus-visible:ring-primary/20"
       >
         {/* Empty state */}
         {messages.length === 0 && (
@@ -376,8 +419,9 @@ export default function AuditChat({
 
         {/* ─── Thinking indicator ─── */}
         {status === "submitted" && (
-          <div className="flex justify-start">
-            <div className="w-full max-w-[85%] sm:max-w-[75%] rounded-2xl rounded-bl-md px-4 py-3 bg-surface border border-border flex flex-col gap-2 animate-pulse">
+          <div className="flex justify-start" role="status" aria-live="polite">
+            <span className="sr-only">AI assistant is thinking and preparing recommendations...</span>
+            <div className="w-full max-w-[85%] sm:max-w-[75%] rounded-2xl rounded-bl-md px-4 py-3 bg-surface border border-border flex flex-col gap-2 animate-pulse" aria-hidden="true">
               <div className="h-4 bg-muted/20 rounded w-3/4"></div>
               <div className="h-4 bg-muted/20 rounded w-full"></div>
               <div className="h-4 bg-muted/20 rounded w-5/6"></div>
@@ -461,13 +505,23 @@ export default function AuditChat({
         </div>
       )}
 
+      {/* Screen reader polite live region for completed AI stream updates */}
+      <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {announcement}
+      </div>
+
       {/* ─── Input area ─── */}
       <form
         onSubmit={handleSubmit}
         className="shrink-0 flex items-end gap-2 py-4 border-t border-border/40"
+        aria-label="Assistant message form"
       >
+        <label htmlFor="chat-user-message-input" className="sr-only">
+          Ask about web performance or audit recommendations
+        </label>
         <textarea
           ref={inputRef}
+          id="chat-user-message-input"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
@@ -480,6 +534,7 @@ export default function AuditChat({
           placeholder="Ask about web performance…"
           rows={1}
           disabled={isGenerating}
+          aria-label="Ask about web performance"
           className="flex-1 resize-none rounded-xl bg-surface border border-border px-4 py-3 text-base text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 min-h-[44px] max-h-32"
           style={{
             // Auto-grow textarea up to max-h
@@ -493,23 +548,26 @@ export default function AuditChat({
           <button
             type="button"
             onClick={() => stop()}
-            className="shrink-0 h-[44px] px-4 rounded-xl bg-danger/90 hover:bg-danger text-white text-sm font-semibold transition-all duration-200 flex items-center gap-1.5"
+            aria-label="Stop generating"
+            title="Stop generating (Esc)"
+            className="shrink-0 h-[44px] px-4 rounded-xl bg-danger hover:bg-danger/90 text-white text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
           >
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <rect x="6" y="6" width="12" height="12" rx="2" />
             </svg>
-            Stop
+            <span>Stop generating</span>
           </button>
         ) : (
           <button
             type="submit"
             disabled={!input.trim()}
-            className="shrink-0 h-[44px] px-5 rounded-xl bg-primary hover:bg-primary-light disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all duration-200 flex items-center gap-1.5"
+            aria-label="Send message"
+            className="shrink-0 h-[44px] px-5 rounded-xl bg-primary hover:bg-primary-light disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
             </svg>
-            Send
+            <span>Send</span>
           </button>
         )}
       </form>
