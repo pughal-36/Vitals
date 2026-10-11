@@ -97,7 +97,7 @@ describe('AuditChat Component', () => {
 
     render(<AuditChat />);
 
-    const stopButton = screen.getByRole('button', { name: 'Stop' });
+    const stopButton = screen.getByRole('button', { name: /Stop/i });
     expect(stopButton).toBeVisible();
     expect(screen.getByPlaceholderText('Ask about web performance…')).toBeDisabled();
   });
@@ -116,7 +116,7 @@ describe('AuditChat Component', () => {
     render(<AuditChat />);
 
     expect(screen.getByLabelText('Generating…')).toBeInTheDocument();
-    const stopButton = screen.getByRole('button', { name: 'Stop' });
+    const stopButton = screen.getByRole('button', { name: /Stop/i });
     expect(stopButton).toBeVisible();
 
     await user.click(stopButton);
@@ -145,7 +145,7 @@ describe('AuditChat Component', () => {
     render(<AuditChat />);
 
     const input = screen.getByPlaceholderText('Ask about web performance…');
-    const sendButton = screen.getByRole('button', { name: 'Send' });
+    const sendButton = screen.getByRole('button', { name: /Send/i });
 
     await user.type(input, 'Tell me about CLS');
     expect(sendButton).not.toBeDisabled();

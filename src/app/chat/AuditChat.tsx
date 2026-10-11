@@ -85,7 +85,7 @@ export function FetchMetaTagsUI({ part }: { part: any }) {
       return (
         <td className="px-4 py-3 text-sm font-medium text-foreground">
           {isImage ? (
-            <img src={value} alt="Open Graph image preview" className="h-12 w-auto max-w-[120px] rounded border border-border" />
+            <img src={value} alt="OG Image Thumbnail" className="h-12 w-auto max-w-[120px] rounded border border-border" />
           ) : (
              <span className="break-all">{value}</span>
           )}
@@ -105,27 +105,27 @@ export function FetchMetaTagsUI({ part }: { part: any }) {
           <table className="w-full text-left border-collapse" aria-label="Extracted meta tags">
             <tbody className="divide-y divide-border">
               <tr>
-                <th scope="row" className="px-4 py-3 text-sm font-medium text-muted w-1/3 bg-surface-hover/50">Title</th>
+                <th scope="col" className="px-4 py-3 text-sm font-medium text-muted w-1/3 bg-surface-hover/50">Title</th>
                 {renderField('Title', title)}
               </tr>
               <tr>
-                <th scope="row" className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">Description</th>
+                <th scope="col" className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">Description</th>
                 {renderField('Description', description)}
               </tr>
               <tr>
-                <th scope="row" className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">OG Title</th>
+                <th scope="col" className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">OG Title</th>
                 {renderField('OG Title', ogTitle)}
               </tr>
               <tr>
-                <th scope="row" className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">OG Description</th>
+                <th scope="col" className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">OG Description</th>
                 {renderField('OG Description', ogDescription)}
               </tr>
               <tr>
-                <th scope="row" className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">OG Image</th>
+                <th scope="col" className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">OG Image</th>
                 {renderField('OG Image', ogImage, true)}
               </tr>
               <tr>
-                <th scope="row" className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">Canonical URL</th>
+                <th scope="col" className="px-4 py-3 text-sm font-medium text-muted bg-surface-hover/50">Canonical URL</th>
                 {renderField('Canonical URL', canonicalUrl)}
               </tr>
             </tbody>
@@ -517,7 +517,7 @@ export default function AuditChat({
         aria-label="Assistant message form"
       >
         <label htmlFor="chat-user-message-input" className="sr-only">
-          Ask about web performance or audit recommendations
+          Type your message for the audit assistant
         </label>
         <textarea
           ref={inputRef}
