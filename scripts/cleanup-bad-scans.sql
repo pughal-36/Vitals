@@ -1,0 +1,47 @@
+-- ==============================================================================
+-- CLEANUP SCRIPT: Legacy Zero-Score Scans
+-- ==============================================================================
+--
+-- IMPORTANT MANUAL STEP:
+-- Do NOT execute this script automatically. Review the queries below and execute
+-- them manually in the Supabase Dashboard SQL Editor for your project.
+--
+-- CONTEXT:
+-- Older audits fetched PageSpeed data without explicit category parameters,
+-- causing Google PageSpeed Insights to only evaluate performance. Missing categories
+-- were coerced to 0, polluting historical scan records with misleading zeros
+-- (score_accessibility = 0, score_best_practices = 0, score_seo = 0).
+--
+-- INSTRUCTIONS:
+-- 1. Run the SELECT statement first to verify which rows are affected.
+-- 2. Once verified, uncomment and run the DELETE statement to purge them.
+-- ==============================================================================
+
+-- Step 1: Preview bad scans before deletion (inspect count and details)
+-- SELECT
+--     id,
+--     created_at,
+--     url,
+--     strategy,
+--     score_performance,
+--     score_accessibility,
+--     score_best_practices,
+--     score_seo
+-- FROM
+--     scans
+-- WHERE
+--     score_accessibility = 0
+--     AND score_best_practices = 0
+--     AND score_seo = 0
+--     AND score_performance IS NOT NULL
+-- ORDER BY
+--     created_at DESC;
+
+-- Step 2: Delete bad legacy scans (uncomment after reviewing above results)
+-- DELETE FROM
+--     scans
+-- WHERE
+--     score_accessibility = 0
+--     AND score_best_practices = 0
+--     AND score_seo = 0
+--     AND score_performance IS NOT NULL;
