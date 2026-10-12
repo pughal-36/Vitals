@@ -1,6 +1,37 @@
 import { test, expect } from '@playwright/test';
+import { createClient } from '@supabase/supabase-js';
+
+const TEST_SCAN_ID = '353b87a5-9081-4dfa-acd8-042d1873837b';
+const supabaseUrl = process.env.NEXT_PUBLIC_VITALS_SUPABASE_URL || process.env.VITALS_SUPABASE_URL;
+const supabaseAnonKey = process.env.VITALS_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_VITALS_SUPABASE_ANON_KEY;
 
 test.describe('Primary Vitals Audit and Assistant Flow', () => {
+  test.beforeAll(async () => {
+    if (supabaseUrl && supabaseAnonKey) {
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      const { error } = await supabase.from('scans').insert({
+        id: TEST_SCAN_ID,
+        url: 'https://example.com',
+        strategy: 'mobile',
+        status: 'done',
+        score_performance: 95,
+        score_accessibility: 90,
+        score_best_practices: 85,
+        score_seo: 100,
+        raw_categories: { categories: {}, failingAudits: [] },
+      });
+      if (error && error.code !== '23505') {
+        console.warn('[beforeAll] test scan insert notice:', error.message);
+      }
+    }
+  });
+
+  test.afterAll(async () => {
+    if (supabaseUrl && supabaseAnonKey) {
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      await supabase.from('scans').delete().eq('id', TEST_SCAN_ID);
+    }
+  });
   test('submits a URL for audit, navigates to assistant, and receives AI chat response', async ({ page }) => {
     // Intercept scan API to return deterministic scan data
     await page.route('**/api/scan**', async (route) => {
@@ -109,7 +140,17 @@ test.describe('Primary Vitals Audit and Assistant Flow', () => {
 
     // 6. Verify the AI response rendered deterministically
     await expect(
-      page.getByText('Great job! Your performance score is 95. Optimize images to maintain fast load times.')
+      page.getByRole('log', { name: 'Audit assistant conversation' }).getByText(
+        'Great job! Your performance score is 95. Optimize images to maintain fast load times.'
+      )
     ).toBeVisible({ timeout: 15000 });
   });
+
+  test('gracefully degrades when scan is not found', async ({ page }) => {
+    await page.goto('/assistant/non-existent-scan-id');
+    await expect(page.getByRole('heading', { name: /scan not found/i })).toBeVisible();
+    await expect(page.getByText(/could not be found or has expired/i)).toBeVisible();
+    await expect(page.getByRole('link', { name: /back to audit/i })).toBeVisible();
+  });
 });
+

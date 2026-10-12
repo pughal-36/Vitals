@@ -1,7 +1,6 @@
 import AuditChat from "@/app/chat/AuditChat";
 import { getScanById } from "@/lib/supabase/scans";
 import { getChatHistory } from "@/lib/supabase/chat";
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import RememberScan from "@/components/RememberScan";
 import type { UIMessage } from "ai";
@@ -13,7 +12,22 @@ export default async function AssistantPage({ params }: { params: Promise<{ scan
     getChatHistory(scanId),
   ]);
   if (!scan) {
-    redirect("/assistant");
+    return (
+      <main id="main-content" tabIndex={-1} className="scan-empty flex-1 px-4 py-20 sm:py-28 outline-none">
+        <div className="mx-auto max-w-xl border border-border bg-surface p-7 sm:p-10">
+          <h1 className="text-3xl font-semibold tracking-[-.04em] text-foreground">Scan not found</h1>
+          <p className="mt-3 text-sm leading-6 text-muted">
+            The requested audit scan could not be found or has expired. Please run a new scan from the Audit page.
+          </p>
+          <Link
+            href="/"
+            className="mt-7 inline-flex min-h-11 items-center border border-foreground bg-foreground px-5 text-sm font-medium text-background"
+          >
+            Back to Audit
+          </Link>
+        </div>
+      </main>
+    );
   }
   
   // Map Supabase rows to AI SDK UIMessage format

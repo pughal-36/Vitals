@@ -287,6 +287,21 @@ export async function listScans(limit = 50): Promise<ScanRow[]> {
 
 /** Fetch a single scan by ID. */
 export async function getScanById(id: string): Promise<ScanRow | null> {
+  if (process.env.E2E_FIXTURES === "1" && id === "353b87a5-9081-4dfa-acd8-042d1873837b") {
+    return {
+      id: "353b87a5-9081-4dfa-acd8-042d1873837b",
+      created_at: new Date().toISOString(),
+      url: "https://example.com",
+      strategy: "mobile",
+      status: "done",
+      score_performance: 95,
+      score_accessibility: 90,
+      score_best_practices: 85,
+      score_seo: 100,
+      raw_categories: { categories: {}, failingAudits: [] },
+    };
+  }
+
   try {
     const { data, error } = await readTable().select("*").eq("id", id).single();
     if (error) {
