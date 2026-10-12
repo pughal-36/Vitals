@@ -1,123 +1,296 @@
-# Vitals Dashboard
-*SEO & Performance Audit Dashboard (Capstone)*
+# Vitals
 
-Vitals is a calm, calibrated SEO and web performance audit instrument built with Next.js (App Router), Tailwind CSS, Google PageSpeed Insights, Gemini Flash, Supabase, and React Three Fiber.
+SEO and Core Web Vitals audits for a single URL, with a saved readout and a Gemini-backed assistant.
 
----
+[![Live demo](https://img.shields.io/badge/live%20demo-vitals--red--six.vercel.app-303A5E)](https://vitals-red-six.vercel.app/)
+[![CI](https://github.com/pughal-36/Vitals/actions/workflows/ci.yml/badge.svg)](https://github.com/pughal-36/Vitals/actions/workflows/ci.yml)
 
-## Architecture & Upgrades (Phases A–D)
+## Hero screenshot
 
-### Phase A: Fast Scan Pipeline
-- **Sub-300ms Initial Response**: Replaced the monolithic 15–40s synchronous scan with a non-blocking background pipeline (`POST /api/scan`) using Next.js `after()`.
-- **Three Progressive Phases**:
-  1. **Phase 1 (~1-2s)**: Direct HTML fetch and Cheerio parsing for quick checks (Title, Meta Description, H1 count & content, Canonical URL, Robots directives, and Image Alt coverage).
-  2. **Phase 2 (~12-18s)**: Targeted Google PageSpeed Insights audit for only the 4 essential categories (Performance, Accessibility, Best Practices, SEO), extracting key Core Web Vitals (FCP, LCP, CLS, TBT, Speed Index) and trimmed failing audits.
-  3. **Phase 3 (~1.5-2s)**: Gemini Flash (`gemini-3.6-flash`) non-blocking AI summary providing an executive verdict, top 3 high-impact fixes, and quick SEO wins.
-- **Client Progressive Polling**: `GET /api/scan/[id]` polls every 2 seconds to render quick checks first, per-gauge loading states as Lighthouse finishes, and AI summary upon completion. Includes a 90-second timeout detector with retry.
-- **24-Hour Cache & Re-scan**: Automatically reuses completed audits within 24 hours for instant (<50ms) load times, with an explicit **Re-scan** action that bypasses the cache.
-- **SSRF Protection & Rate Limiting**: Enforces strict HTTPS-only URLs, blocks loopback/private IPs/internal domains, and limits scans to 15 per minute per IP.
+![App hero section](docs/images/hero.png)
 
-### Phase B: Navigation & Persistence
-- **Zero Dead Ends**: Unified navigation across **Audit**, **Readout**, and **Assistant**. If no audit exists yet, Readout and Assistant present a clean empty state with a direct "Back to Audit" action.
-- **Persistent Scan Context**: `?scan=<id>` is tracked across URL query parameters and mirrored to `localStorage` / cookies. Page reloads, history navigation, or direct links restore the full audit and chat history from Supabase.
-- **Contextual Assistant**: The assistant preloads the active scan's scores, failing audits, and meta tags into the system prompt, welcoming the user with an initial scan breakdown and relevant follow-up question chips.
+## Project brief
 
-### Phase C: 3D Hero Experience
-- **Instrument-Mounted 3D Earth**: Low-poly Earth model by Zoe XR via [Poly Pizza](https://poly.pizza/m/3U-XAIY031u) ([CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)) mounted in a recessed graphite (`#2B2E33`) panel with a hairline steel bezel.
-- **Model Compression**: Compressed with Meshopt via `gltf-transform` from **71.2 KB down to 17.2 KB** (**75.7% reduction**).
-- **Calibrated Palette**: Ocean in graphite-soft (`#3A3E44`), land in steel-highlight (`#C8CDD2`), other sites in steel-muted (`#D9DCE0`). Phosphor-amber (`#E8A33D`) is strictly reserved for the completed audit pin, localized pulse rings, and beam.
-- **Interactive Controls & Stand-Out Cue**: Idle spin, cursor tilt, scroll zoom, and drag with damped release inertia. Upon completed audit, the amber pin drops and eases toward the camera with an interactive score label.
-- **Responsible Loading**: Lazy-loaded (`ssr: false`), capped DPR (1.5), frameloop pausing when offscreen or in background tabs, and static SVG fallback for `prefers-reduced-motion`, low-power devices, or missing WebGL.
+Vitals is a small production dashboard for people who need a first look at a page’s speed, accessibility, best-practices, and SEO signals before they change production. You paste an HTTPS URL; the app fetches the HTML, runs Google PageSpeed Insights, stores the result in Supabase, and can summarize or answer questions about that scan with Gemini. The idea is a single calibrated flow (Audit → Readout → Assistant) instead of bouncing between Lighthouse, docs, and a generic chatbot.
 
-### Phase D: Dynamic SEO Loading Tips
-- **AI-Generated Variety**: While scans execute, `/api/tips` queries Gemini Flash with randomized topic angles (Core Web Vitals, metadata, crawl paths, mobile usability, accessibility, image optimization, structured data, indexability) returning fresh 6–8 one-liners as JSON.
-- **Session Deduplication**: Client tracks seen tips in `sessionStorage`, prefetches batches before the queue runs low, and avoids repeating tips within a browsing session.
-- **Resilient Fallback**: Gracefully falls back to a curated static pool when offline or when the AI endpoint is slow.
+## Live demo
 
----
+**URL:** [https://vitals-red-six.vercel.app/](https://vitals-red-six.vercel.app/)
 
-## Performance Measurements
+What to try first:
 
-| Metric | Before (Synchronous Monolith) | After (Progressive Pipeline) | Improvement |
-| :--- | :--- | :--- | :--- |
-| **Initial API Response** | 15,000 – 40,000 ms | **< 280 ms** | **> 98% faster** |
-| **First Meaningful Signal (Phase 1 HTML)** | 15,000 – 40,000 ms | **1,200 – 1,800 ms** | **~90% faster** |
-| **Full Lighthouse Scores (Phase 2 PSI)** | 15,000 – 40,000 ms | **12,000 – 18,000 ms** | **Trimmed & non-blocking** |
-| **AI Summary (Phase 3 Gemini)** | Blocked entire page | **1,500 – 2,200 ms** (background) | **Zero blocking time** |
-| **24-Hour Cached Audit Load** | N/A (re-ran full PSI) | **< 45 ms** | **Instantaneous** |
-| **3D Earth Model Size** | 71,164 bytes | **17,260 bytes** | **75.7% smaller** |
+1. On the home page, paste `https://example.com` (or use **Try an example: https://vercel.com**) and run **Scan**. Quick HTML checks appear first; category scores fill in as PageSpeed finishes.
+2. Open **Readout** for the saved scores and failing audits, then **Assistant** and ask a follow-up (or use a suggested chip). Press **Escape** to stop a stream.
+3. Open **Readout** or **Assistant** with no saved scan to see the empty state and **Back to Audit**.
 
-### Lighthouse & Mobile Audit (Desktop & Mobile Simulation)
-- **Lighthouse Performance Score**: **100 / 100**
-- **First Contentful Paint (FCP)**: **0.2 s**
-- **Largest Contentful Paint (LCP)**: **0.6 s**
-- **Total Blocking Time (TBT)**: **70 ms**
-- **Cumulative Layout Shift (CLS)**: **0.00**
-- **Mobile Viewport (390 × 844)**: **60 FPS** smooth rendering with zero horizontal overflow and low memory overhead.
+## Key features
 
----
+- Progressive scan pipeline: `POST /api/scan` returns quickly; work continues with Next.js `after()`, and the form polls `GET /api/scan/[scanId]` about every 2 seconds.
+- Phase 1 HTML checks (title, meta description, H1, canonical, robots, image alt coverage) via Cheerio.
+- Phase 2 PageSpeed Insights scores (Performance, Accessibility, Best Practices, SEO) plus Core Web Vitals excerpts and failing audits.
+- Phase 3 Gemini summary stored on the scan (timeout 15s; failure leaves `summary` empty).
+- 24-hour scan reuse with an explicit **Re-scan** that bypasses cache; 90-second stuck-scan timeout.
+- HTTPS-only URL validation, SSRF blocks for private/internal hosts, and 15 scans per minute per IP.
+- Scan id kept in the query string, `localStorage` (`vitals.scanId`), and a `scanId` cookie so Readout and Assistant restore context.
+- Streaming assistant (`useChat` → `POST /api/chat`) with scan-aware system prompt, `fetchMetaTags` tool, suggested follow-up chips, Stop / Escape, and distinct offline / 429 / generic errors.
+- Instrument-style Earth hero: Three.js globe on desktop, static SVG on small viewports or when WebGL fails / reduced motion.
+- Static loading tips during a scan (curated list in `SeoLoadingTips`; no live tips API).
+- Route-level error and not-found UI with **Try again** / **Back to dashboard**.
 
-## Architectural Decisions
+## Architecture
 
-1. **Additive Database Evolution & Graceful Degradation**: Created `supabase/migrations/20261008220000_scan_status.sql` adding `status`, `quick_checks`, `summary`, `error_text`, `timings`, and `updated_at`. The application code was written to degrade gracefully: if new columns do not exist in the database yet, auxiliary pipeline data is safely packed inside `raw_categories`, preventing any runtime errors before migration application.
-2. **SSRF and Protocol Enforcement**: Restricted scan targets to `https://` protocol only and strictly blocked private/internal network ranges (`127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`, `::1`, `fc00::/7`, `fe80::/10`, `.local`, `.internal`, `.lan`).
-3. **Background Execution**: Utilized Next.js 16 `after()` from `next/server` to process background jobs asynchronously without needing external queue infrastructure or serverless execution limits.
-4. **Design Palette Integrity**: Strictly followed the light-only steel & graphite design system (`#E8E9EB` base, `#2B2E33` graphite, `#C8CDD2` steel-highlight, `#E8A33D` phosphor-amber). Dark mode / theme switches were intentionally omitted to maintain design fidelity.
-5. **Session Storage for Tip Deduplication**: Stored seen tip hashes in `sessionStorage` rather than `localStorage` so users get fresh advice across different browser sessions while never seeing duplicates within a single sitting.
+| Area | Role |
+| --- | --- |
+| `src/app` | App Router pages (`/`, `/readout`, `/assistant`, `/about`) and route handlers under `src/app/api`. |
+| `src/components` | Scan form, globe, navigation, recent scans, loading tips. |
+| `src/lib/scanner` | URL validation, in-memory rate limit, background pipeline. |
+| `src/lib/gemini` | Gemini Flash model adapter and chat system prompt. |
+| `src/lib/supabase` | Browser/server clients and scan/chat persistence. |
+| `supabase/migrations` | Additive SQL for scan status, quick checks, summary, timings. |
+| `audit/` | Before/after Lighthouse + axe-core reports and screenshots. |
 
----
+Data flow:
 
-## Database Migration
+1. `UrlAuditForm` posts the URL to `/api/scan`.
+2. The handler validates, rate-limits, reuses a 24h cache when possible, otherwise inserts a pending row and schedules `runScanPipeline` in `after()`.
+3. The pipeline fetches HTML, calls PageSpeed Insights, writes scores, then optionally generates a Gemini summary.
+4. The client polls `/api/scan/[scanId]` until `done` or `failed`.
+5. Readout loads the row from Supabase. Assistant loads the scan plus chat history, then streams through `/api/chat`.
 
-The additive SQL migration is located at [`supabase/migrations/20261008220000_scan_status.sql`](supabase/migrations/20261008220000_scan_status.sql).
+![Architecture diagram](docs/images/architecture.png)
 
-### Migration Status:
-- The SQL file is committed to the repository. If you have Supabase CLI access or SQL Editor access, run:
-  ```bash
-  supabase db push
-  # or execute the SQL file directly in the Supabase SQL Editor dashboard
-  ```
-- **Zero Downtime Guarantee**: The codebase includes fallback column mapping, so the application operates seamlessly even before the SQL migration is applied to production.
+```mermaid
+flowchart LR
+  User["Browser"] --> Home["Home / UrlAuditForm"]
+  Home -->|"POST /api/scan"| ScanAPI["scan route"]
+  ScanAPI --> RL["Rate limit + HTTPS/SSRF checks"]
+  RL --> Cache{"Recent completed scan?"}
+  Cache -->|yes| Poll["GET /api/scan/id"]
+  Cache -->|no| After["after() pipeline"]
+  After --> HTML["Cheerio HTML checks"]
+  After --> PSI["PageSpeed Insights"]
+  After --> GeminiSum["Gemini generateText summary"]
+  HTML --> SB["Supabase scans"]
+  PSI --> SB
+  GeminiSum --> SB
+  After --> Poll
+  Poll --> Readout["Readout page"]
+  Readout --> Assist["Assistant + AuditChat"]
+  Assist -->|"POST /api/chat stream"| ChatAPI["chat route"]
+  ChatAPI --> GeminiChat["Gemini streamText"]
+  ChatAPI --> SBChat["Supabase chat_messages"]
+```
 
----
+## AI integration
 
-## Environment Variables
+**Model:** `gemini-3.6-flash` via `@ai-sdk/google` (`createGoogleGenerativeAI` with `VITALS_GEMINI_API_KEY`) in [`src/lib/gemini/model.ts`](src/lib/gemini/model.ts).
 
-Configure these variables in `.env.local` for local development and in **Vercel → Settings → Environment Variables**:
+**Call sites**
 
-| Variable | Description | Exposed to Browser |
-| :--- | :--- | :--- |
-| `VITALS_GEMINI_API_KEY` | Google Gemini API key used by Chat and `/api/tips` | No (Server only) |
-| `VITALS_PAGESPEED_API_KEY` | Google PageSpeed Insights API key | No (Server only) |
-| `NEXT_PUBLIC_VITALS_SUPABASE_URL` | Supabase project URL | Yes |
-| `VITALS_SUPABASE_ANON_KEY` | Supabase Anon Key (or `NEXT_PUBLIC_VITALS_SUPABASE_ANON_KEY`) | Yes |
+- Chat: [`src/app/api/chat/route.ts`](src/app/api/chat/route.ts) uses `streamText` and `toUIMessageStreamResponse()`. Client: [`src/app/chat/AuditChat.tsx`](src/app/chat/AuditChat.tsx) (`useChat`).
+- Scan summary: [`src/lib/scanner/pipeline.ts`](src/lib/scanner/pipeline.ts) uses `generateText` after scores are saved.
 
----
+**Why an LLM is used:** PageSpeed JSON and failing audits are hard to read as a first pass. The model turns a saved scan into a short verdict plus Q&A, without blocking the scan HTTP response.
 
-## Getting Started
+**Prompt structure**
+
+Shared chat prompt [`AUDIT_SUMMARY_PROMPT`](src/lib/gemini/prompts.ts): consultant role, markdown, no fabricated scores, numbered fixes, and exactly three follow-ups inside `<chips>[...]</chips>`.
+
+When a `scanId` cookie is present, the chat route prepends the scanned URL, four category scores, and up to five failing audits, then appends `AUDIT_SUMMARY_PROMPT`.
+
+The pipeline summary prompt is inline in `pipeline.ts`: scores, selected vitals, quick checks, top failing audits → executive verdict, top 3 fixes, quick SEO wins, under 250 words.
+
+**Structured output / validation**
+
+- Chat user messages: reject missing, empty, or whitespace-only input (`400`, `invalid_input`).
+- Tool `fetchMetaTags`: Zod `z.string().url()`; Cheerio extracts title/description/OG/canonical.
+- Follow-up chips: JSON array inside `<chips>` parsed on the client; invalid JSON is ignored.
+- Scan summary: plain markdown string stored on the row; no schema parse.
+
+**Streaming:** Chat streams tokens to the UI. A Stop control and Escape abort the stream. `onError` mid-stream returns a generic string and does not leak stack traces.
+
+**Fallbacks**
+
+- Gemini summary timeout/error: log and leave `summary` empty; scores still save.
+- Chat 429 / upstream / generic JSON errors; UI copy for offline, rate limit, and generic failure with retry.
+- `ENABLE_SABOTAGE=true` (local only) can inject 429, 500, slow, midstream abort, or malformed tool output.
+
+There is no `/api/tips` route; loading copy is the static list in `SeoLoadingTips`.
+
+## Tech stack
+
+| Layer | Tool | Why it is in the repo |
+| --- | --- | --- |
+| UI | Next.js 16.3.5 App Router, React 19.2.8 | Pages, `after()`, route handlers, streaming responses. |
+| Styling | Tailwind CSS 4 | Utility styling plus tokens in `globals.css`. |
+| Audit data | Google PageSpeed Insights API | Lighthouse categories and vitals for a public URL. |
+| HTML checks | Cheerio | Fast first-phase parse without waiting on PSI. |
+| Persistence | Supabase (`@supabase/supabase-js`) | Scans and chat messages. |
+| AI | Vercel AI SDK + `@ai-sdk/google` | `streamText` / `generateText` against Gemini Flash. |
+| Validation | Zod | Chat tool input schema. |
+| 3D hero | Three.js, React Three Fiber, Drei | Desktop globe; mobile uses SVG. |
+| Markdown | `react-markdown`, `remark-gfm` | Assistant message rendering. |
+| Unit tests | Vitest 5, Testing Library, jsdom | Form, chat, globe, URL helper. |
+| E2E | Playwright | Primary audit → assistant flow in `tests/audit-flow.spec.ts`. |
+| A11y / perf audit | Lighthouse 13.5.0, axe-core 4.13.0 | Reports under `audit/` and methodology in `AUDIT.md`. |
+| CI | GitHub Actions | `npm test` then Playwright on Node 22. |
+| Hosting | Vercel | Deployed app at the live demo URL. |
+
+## Getting started
+
+**Prerequisites:** Node.js 22 (matches CI), npm, and accounts/keys for PageSpeed Insights, Gemini, and Supabase.
 
 ```bash
-# Install dependencies
+git clone https://github.com/pughal-36/Vitals.git
+cd Vitals
 npm install
+cp .env.example .env.local
+```
 
-# Run development server
+Fill `.env.local` (never commit it). Apply [`supabase/migrations/20261008220000_scan_status.sql`](supabase/migrations/20261008220000_scan_status.sql) in the Supabase SQL editor if those columns are not on your project yet.
+
+```bash
 npm run dev
+```
 
-# Run unit tests (Vitest)
-npm run test
+Open [http://localhost:3000](http://localhost:3000). Verified locally: `npm install`, `npm run dev` (HTTP 200 on `/`), `npm run build`, `npm test`.
 
-# Run build & type check
+```bash
 npm run build
-
-# Run end-to-end tests (Playwright)
+npm test
+npm run test:coverage
 npm run test:e2e
 ```
 
----
+E2E expects the app at `http://localhost:3000` (Playwright starts `npm run dev` unless one is already running). CI also needs the public Supabase URL/anon key secrets.
 
-## If I Had More Time
+## Scripts
 
-1. **Multi-Region Background Workers**: Offload heavy PSI batch audits to background workers or serverless queues (e.g., Inngest / Temporal) for enterprise scale.
-2. **Accessible Keyboard Orbit Controls**: Add ARIA sliders and arrow key handlers for rotating and zooming the 3D globe for screen-reader and keyboard-only users.
-3. **Historical Trend Sparklines**: Render historical score progression over time for URLs scanned multiple times over weeks/months.
-4. **PDF / Image Export**: Generate branded, calibrated PDF summaries for SEO client deliverables.
+| Script | Command | Purpose |
+| --- | --- | --- |
+| `dev` | `next dev` | Local development server (Turbopack). |
+| `build` | `next build` | Production build and typecheck. |
+| `start` | `next start` | Serve the production build. |
+| `lint` | `eslint` | Lint the project. |
+| `test` | `vitest run` | Unit and component tests once. |
+| `test:watch` | `vitest` | Watch mode. |
+| `test:coverage` | `vitest run --coverage` | Same tests with v8 coverage. |
+| `test:e2e` | `playwright test` | Chromium e2e. |
+
+Audit helpers under `scripts/` (`run-baseline-suite.mjs`, `run-after-suite.mjs`, `test-axe.mjs`, and related parsers) regenerate Lighthouse/axe artifacts; they are not npm scripts.
+
+## Testing
+
+| Kind | Where | How to run |
+| --- | --- | --- |
+| Unit / component | `src/**/*.test.{ts,tsx}` (6 files) | `npm test` |
+| E2E | `tests/audit-flow.spec.ts` | `npm run test:e2e` |
+| Coverage | Vitest v8 | `npm run test:coverage` |
+
+Covered in unit tests: URL validation (`url.test.ts`), audit form (`UrlAuditForm.test.tsx`), assistant empty/error/stream UI (`AuditChat.test.tsx`), meta-tag tool UI (`FetchMetaTagsUI.test.tsx`), loading tips (`SeoLoadingTips.test.tsx`), globe reduced-motion / static fallback (`GlobeExperience.test.tsx`).
+
+Playwright covers submitting a URL (scan API mocked), navigating to assistant, and receiving a mocked chat stream.
+
+**Coverage from `npm run test:coverage` (2026-10-12), instrumented files only:**
+
+| | Statements | Branches | Functions | Lines |
+| --- | ---: | ---: | ---: | ---: |
+| All files | 66.76% (231/346) | 58.8% (217/369) | 62.85% (44/70) | 68.94% (222/322) |
+| `AuditChat.tsx` | 65.41% | 66.15% | 72.41% | 67.46% |
+| `UrlAuditForm.tsx` | 71.79% | 52.32% | 57.14% | 74.07% |
+| `SeoLoadingTips.tsx` | 100% | 75% | 100% | 100% |
+| `lib/scanner/url.ts` | 89.65% | 90.9% | 100% | 89.65% |
+| `GlobeExperience.tsx` | 38.88% | 43.9% | 35.71% | 41.66% |
+
+`AUDIT.md` also records 28 passing tests across 6 suites. Coverage does not include API routes or the scan pipeline.
+
+![Test coverage](docs/images/coverage.png)
+
+## Performance and accessibility
+
+Full methodology, keyboard walkthrough, and screenshots: [`AUDIT.md`](AUDIT.md). Numbers below are mobile Lighthouse 13.5.0 (Moto G Power emulation, 4× CPU, simulated 4G) and axe-core 4.13.0 from that report. WAVE was not run.
+
+| Page | Metric | Before (deployed preview) | After (optimized build) |
+| --- | --- | ---: | ---: |
+| Home `/` | Performance | 26 | 85 (peak 89) |
+| | Accessibility | 100 | 100 |
+| | Best Practices | 100 | 100 |
+| | SEO | 91 | 100 |
+| | LCP | 8.7 s | 2.7 s |
+| | TBT | 2,700 ms | 440 ms |
+| | CLS | 0.000 | 0.000 |
+| | axe-core violations | 0 | 0 |
+| About `/about` | Performance | 71 | 72 (peak 96) |
+| | Accessibility / BP | 100 | 100 |
+| | SEO | 91 | 100 |
+| Readout | Performance | 76 | 82 |
+| | Accessibility / BP | 100 | 100 |
+| | SEO | 91 | 100 |
+| | TBT | 780 ms | 490 ms |
+| Assistant | Performance | 78 | 76 (peak 79) |
+| | Accessibility / BP / SEO | 100 | 100 |
+| | TBT | 760 ms | 660 ms |
+
+All four routes: 0 axe-core violations after the audit. Home still has 1 axe incomplete `color-contrast` alert on the hero; `AUDIT.md` treats it as a false positive (cream on navy, ~11.72:1).
+
+**One change from those findings:** `GlobeExperience` no longer loads the Three.js canvas on viewports ≤768px (static SVG instead) and defers the desktop bundle. Home mobile Performance went from 26 to 85; TBT from 2,700 ms to 440 ms (`AUDIT.md`, commit `aed925b`).
+
+## Deployment and operations
+
+- **Platform:** Vercel. Production URL `https://vitals-red-six.vercel.app/`.
+- **How deploys happen:** Push to GitHub; Vercel builds from the connected repo. GitHub Actions on `main`/PRs runs Vitest and Playwright (Playwright needs Supabase repo secrets).
+- **Checklist:** [`docs/DEPLOYMENT_CHECKLIST.md`](docs/DEPLOYMENT_CHECKLIST.md).
+
+**How it fails in the UI**
+
+- Invalid URL on the form: inline alert (`Please enter a URL` / `Please enter a valid URL starting with https://`).
+- Scan `failed` or 90s timeout: **Audit Failed** with `error_text` (or generic copy) and **Try again**.
+- API 429 on scan: `Rate limit exceeded. Please wait a minute...`
+- HTTPS/SSRF rejection: messages from `validateAndNormalizeUrl` (HTTPS only, no private/internal hosts).
+- Gemini summary failure: scores still show; summary omitted.
+- Readout/Assistant with no scan: empty state **Enter a URL to scan** / **Back to Audit**. Missing scan id redirects to those entry routes.
+- Chat: offline, rate limit, and generic error panels with retry; tool `output-error` shows meta-tag fetch failure; mid-stream errors masked.
+- Globe WebGL error: static SVG fallback. Reduced motion / low-power: no 3D canvas.
+- App Router `error.tsx`: **Something went wrong** with **Try again** and **Back to dashboard**.
+- `not-found.tsx`: **Page not found**.
+
+**Rollback:** Redeploy the previous Production build from the Vercel dashboard (see the checklist).  
+**Monitoring:** Vercel deployment status, GitHub Actions, and a manual Audit → Readout → Assistant smoke after release. No APM config in this repo.
+
+## Known limitations and future improvements
+
+- Assistant mobile Performance in `AUDIT.md` is 76 (peak 79), under the stated ≥80 target.
+- About-page Lighthouse performance varied (72 vs peak 96) under 4× throttle.
+- In-memory rate limit does not share state across Vercel instances.
+- `POST /api/audit` is a leftover synchronous PSI path; the UI uses `/api/scan`.
+- `FAILURES.md` still lists several chat/audit UI gaps as Todo (e.g. mid-stream incomplete marking).
+- Scan-summary Gemini output is not schema-validated.
+- `ENABLE_SABOTAGE` must never be `true` in production.
+- Coverage is limited to components and `url.ts`; routes and `pipeline.ts` are untested at unit level.
+- No historical score charts, PDF export, or keyboard orbit controls for the globe.
+- `cleanup-bad-scans.sql` is a manual Supabase cleanup for legacy zero-score rows, not an automated job.
+
+## Project structure
+
+```text
+src/app/                 # Routes, layouts, API handlers
+src/app/api/scan/        # Progressive scan create + poll
+src/app/api/chat/        # Gemini streaming chat
+src/app/chat/            # AuditChat UI (used by /assistant)
+src/components/          # Form, globe, nav, tips, recent scans
+src/lib/scanner/         # Pipeline, URL rules, rate limit
+src/lib/gemini/          # Model + system prompt
+src/lib/supabase/        # Clients, scans, chat
+supabase/migrations/     # Additive scan-status SQL
+tests/                   # Playwright e2e
+scripts/                 # Lighthouse / axe audit runners
+audit/                   # Before/after reports and screenshots
+docs/                    # Deployment checklist and README images
+.github/workflows/       # CI
+```
+
+## License and author
+
+No license file is in this repository (private student capstone).
+
+Author: [pughal](https://github.com/pughal-36) (`pughal-36/Vitals`). Earth model credit: Zoe XR via Poly Pizza (see `/about`).
