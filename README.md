@@ -57,8 +57,6 @@ Data flow:
 4. The client polls `/api/scan/[scanId]` until `done` or `failed`.
 5. Readout loads the row from Supabase. Assistant loads the scan plus chat history, then streams through `/api/chat`.
 
-![Architecture diagram](docs/images/architecture.png)
-
 ```mermaid
 flowchart LR
   User["Browser"] --> Home["Home / UrlAuditForm"]
