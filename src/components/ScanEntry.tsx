@@ -4,14 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function RememberScan({ scanId }: { scanId: string }) {
-  useEffect(() => {
-    try { localStorage.setItem("vitals.scanId", scanId); } catch { /* storage may be disabled */ }
-    document.cookie = `scanId=${encodeURIComponent(scanId)}; path=/; max-age=2592000; samesite=lax`;
-  }, [scanId]);
-  return null;
-}
-
 export default function ScanEntry({ destination, requestedScan }: { destination: "readout" | "assistant"; requestedScan?: string }) {
   const router = useRouter();
   const [checked, setChecked] = useState(false);

@@ -19,10 +19,16 @@
 
 # production
 /build
+/dist
 
 # misc
 .DS_Store
 *.pem
+*.log
+
+# editor
+.idea
+.vscode
 
 # debug
 npm-debug.log*
